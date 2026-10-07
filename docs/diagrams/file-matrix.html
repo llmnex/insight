@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>insight-agent · 总表矩阵</title>
+<script src="data.js"></script>
+<style>
+  :root {
+    --bg-0: #F8FAFC; --bg-1: #FFFFFF; --bg-2: #F1F5F9; --bg-3: #E2E8F0;
+    --line: rgba(15, 23, 42, 0.08); --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A; --text-2: #475569; --text-3: #94A3B8; --text-on-accent: #FFFFFF;
+    --accent-cyan: #0891B2; --accent-blue: #2563EB; --accent-purple: #7C3AED;
+    --accent-pink: #DB2777; --accent-green: #16A34A; --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C; --accent-red: #DC2626;
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-0); color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; font-size: 15px; }
+  body { background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px; }
+  header { padding: 22px 40px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); position: relative; }
+  header::after { content: ''; position: absolute; left: 40px; right: 40px; bottom: -1px; height: 2px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink), var(--accent-orange), var(--accent-green), var(--accent-purple)); }
+  h1 { font-size: 28px; font-weight: 700; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 16px; color: var(--text-2); margin-top: 6px; }
+  .meta { position: absolute; right: 40px; top: 28px; font-size: 14px; color: var(--text-3); display: flex; gap: 10px; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; padding: 5px 11px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .meta a:hover { background: var(--accent-cyan); color: var(--text-on-accent); }
+  main { padding: 24px 40px 60px; max-width: 1900px; margin: 0 auto; }
+
+  .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow-md); }
+  .stat-num { font-size: 28px; font-weight: 700; color: var(--accent-cyan); }
+  .stat-label { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+  .matrix-wrap { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-md); overflow: hidden; margin-bottom: 20px; }
+  .matrix-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; }
+  .matrix-title { font-size: 18px; font-weight: 600; flex: 1; }
+  .filter-bar { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .filter-input { padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; font-size: 13px; min-width: 180px; font-family: inherit; }
+  .matrix-body { overflow-x: auto; max-height: 75vh; }
+  .matrix { border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .matrix th, .matrix td { padding: 8px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; }
+  .matrix th { background: var(--bg-2); color: var(--text-2); font-weight: 600; position: sticky; top: 0; z-index: 2; }
+  .matrix th.scenario-col { writing-mode: horizontal-tb; }
+  .matrix th.row-label { text-align: left; position: sticky; left: 0; z-index: 3; background: var(--bg-2); min-width: 220px; }
+  .matrix td.row-label { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--bg-1); font-family: ui-monospace, "Cascadia Code", monospace; font-size: 12px; }
+  .matrix td.mod-tag { background: var(--bg-2); font-size: 12px; color: var(--text-3); font-weight: 600; text-align: left; min-width: 80px; }
+  .matrix th.mod-tag { background: var(--bg-2); text-align: left; min-width: 80px; position: sticky; left: 220px; z-index: 3; }
+
+  /* 矩阵单元格状态 */
+  .cell-on { background: rgba(22, 163, 74, 0.18); color: #15803D; font-weight: 700; font-size: 16px; }
+  .cell-on-strong { background: #16A34A; color: #fff; font-weight: 700; font-size: 16px; }
+  .cell-off { color: var(--text-3); font-size: 13px; }
+  .cell-module-bg { background: var(--mod-bg); }
+
+  /* 概览表（每场景激活文件数） */
+  .summary { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 0; box-shadow: var(--shadow-md); overflow: hidden; margin-bottom: 20px; }
+  .summary-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+  .summary-title { font-size: 18px; font-weight: 600; }
+  .summary-body { padding: 18px 22px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .summary-card { background: var(--bg-2); border-radius: 10px; padding: 14px 16px; border-left: 4px solid var(--scene-color, var(--accent-cyan)); }
+  .summary-card-title { font-size: 15px; font-weight: 700; color: var(--text-1); }
+  .summary-card-files { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+  .summary-card-files b { color: var(--accent-cyan); font-size: 18px; font-weight: 700; }
+
+  /* 详细文件列表 */
+  .detail-table { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 0; box-shadow: var(--shadow-md); overflow: hidden; }
+  .detail-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+  .detail-title { font-size: 18px; font-weight: 600; }
+  .detail-body { padding: 18px 22px; }
+  .file-row { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 200px 1fr auto; gap: 14px; align-items: center; font-size: 14px; }
+  .file-row:last-child { border-bottom: none; }
+  .file-path { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 13px; color: var(--text-1); font-weight: 600; }
+  .file-desc { color: var(--text-2); font-size: 13px; }
+  .file-scenarios { display: flex; gap: 4px; flex-wrap: wrap; }
+  .file-tag { padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 insight-agent · 总表矩阵</h1>
+  <div class="subtitle">所有文件 × 所有场景 · 一张表看清哪个文件在哪个场景被激活 · 数据与 <a href="interactive-demo.html" style="color:var(--accent-cyan);">interactive-demo.html</a> 共享</div>
+  <div class="meta">
+    <a href="interactive-demo.html">交互演示</a>
+    <a href="flow-scenarios.html">场景流程图</a>
+    <a href="flow-flows.html">关联流程图</a>
+    <a href="overview.html">序章</a>
+    <a href="../../insight.md">主文档</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- 统计 -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- 矩阵 -->
+  <div class="matrix-wrap">
+    <div class="matrix-header">
+      <div class="matrix-title">🔲 激活矩阵 · 行=文件 · 列=场景</div>
+      <div class="filter-bar">
+        <input class="filter-input" id="searchInput" placeholder="🔍 过滤文件路径 / 模块..." />
+        <span style="color: var(--text-3); font-size: 13px;" id="filterCount"></span>
+      </div>
+    </div>
+    <div class="matrix-body">
+      <table class="matrix" id="matrixTable"></table>
+    </div>
+  </div>
+
+  <!-- 场景概览 -->
+  <div class="summary">
+    <div class="summary-header">
+      <div class="summary-title">📋 场景激活文件概览（每场景有多少个文件被点亮）</div>
+    </div>
+    <div class="summary-body">
+      <div class="summary-grid" id="summaryGrid"></div>
+    </div>
+  </div>
+
+  <!-- 详细文件清单 -->
+  <div class="detail-table">
+    <div class="detail-header">
+      <div class="detail-title">📂 所有文件清单（按模块分组）</div>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+</main>
+
+<script>
+// data.js 已将全部数据 + 工具函数挂为全局变量，无需解构
+const _INSIGHT = window.INSIGHT_DATA;
+
+function init() {
+  renderStats();
+  renderMatrix();
+  renderSummary();
+  renderDetail();
+  bindFilter();
+}
+
+function renderStats() {
+  const totalScenarios = SCENARIOS.length;
+  const totalFiles = FILES.length;
+  let totalPairs = 0;
+  const scenarioFileCount = {};
+  const fileScenarioCount = {};
+  SCENARIOS.forEach(s => {
+    const set = new Set();
+    s.steps.forEach(st => st.files.forEach(f => set.add(f)));
+    scenarioFileCount[s.id] = set.size;
+    totalPairs += set.size;
+    set.forEach(f => { fileScenarioCount[f] = (fileScenarioCount[f] || 0) + 1; });
+  });
+  const mostUsedFile = Object.entries(fileScenarioCount).sort((a,b) => b[1]-a[1])[0];
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${totalScenarios}</div><div class="stat-label">场景数</div></div>
+    <div class="stat-card"><div class="stat-num">${totalFiles}</div><div class="stat-label">文件数</div></div>
+    <div class="stat-card"><div class="stat-num">${totalPairs}</div><div class="stat-label">场景×文件 总激活对</div></div>
+    <div class="stat-card"><div class="stat-num">${mostUsedFile ? mostUsedFile[1] : 0}</div><div class="stat-label">最热门文件出现在 <span style="font-family:ui-monospace;font-size:13px;color:var(--text-1);">${mostUsedFile ? mostUsedFile[0] : 'N/A'}</span></div></div>
+  `;
+}
+
+function buildActivationMap() {
+  // file -> { scenarioId: true }
+  const map = {};
+  SCENARIOS.forEach(s => {
+    const set = new Set();
+    s.steps.forEach(st => st.files.forEach(f => set.add(f)));
+    set.forEach(f => {
+      if (!map[f]) map[f] = {};
+      map[f][s.id] = true;
+    });
+  });
+  return map;
+}
+
+function renderMatrix() {
+  const activationMap = buildActivationMap();
+  const table = document.getElementById('matrixTable');
+
+  // 分组：按模块
+  const grouped = {};
+  FILES.forEach(f => {
+    const info = getFileInfo(f.path);
+    if (!grouped[info.module]) grouped[info.module] = [];
+    grouped[info.module].push(f);
+  });
+
+  let html = '<thead><tr>';
+  html += '<th class="row-label">文件路径</th>';
+  html += '<th class="mod-tag">模块</th>';
+  SCENARIOS.forEach(s => {
+    html += `<th class="scenario-col" style="background: ${s.color}; color: #fff; min-width: 70px;">${s.id}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  Object.entries(grouped).forEach(([modKey, files]) => {
+    const modInfo = MODULES[modKey];
+    files.forEach((f, fi) => {
+      const info = getFileInfo(f.path);
+      html += `<tr data-path="${f.path}" data-module="${modInfo.name}">`;
+      html += `<td class="row-label">${f.path}</td>`;
+      html += `<td class="mod-tag" style="color: ${modInfo.color};">${modInfo.name}</td>`;
+      SCENARIOS.forEach(s => {
+        const active = activationMap[f.path] && activationMap[f.path][s.id];
+        const isTop = active && (Object.keys(activationMap[f.path]).length >= 5);  // 出现在 ≥5 场景
+        html += `<td class="${active ? (isTop ? 'cell-on-strong' : 'cell-on') : 'cell-off'}">${active ? '✓' : '·'}</td>`;
+      });
+      html += '</tr>';
+    });
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function renderSummary() {
+  const grid = document.getElementById('summaryGrid');
+  const activationMap = buildActivationMap();
+  grid.innerHTML = SCENARIOS.map(s => {
+    const set = new Set();
+    s.steps.forEach(st => st.files.forEach(f => set.add(f)));
+    return `<div class="summary-card" style="--scene-color: ${s.color};">
+      <div class="summary-card-title"><span style="display:inline-block;width:24px;height:24px;background:${s.color};color:#fff;border-radius:5px;text-align:center;line-height:24px;font-weight:700;font-size:13px;margin-right:6px;">${s.id}</span> ${s.name.replace(/^[A-Z] · /, '')}</div>
+      <div class="summary-card-files">激活 <b>${set.size}</b> 个文件 · ${s.steps.length} 个步骤</div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
+        ${[...set].slice(0, 8).map(f => {
+          const info = getFileInfo(f);
+          return `<span style="display:inline-block;padding:2px 7px;background:${getModuleColor(info.module)};color:#fff;border-radius:3px;font-size:11px;font-family:ui-monospace,monospace;">${f}</span>`;
+        }).join('')}
+        ${set.size > 8 ? `<span style="font-size:12px;color:var(--text-3);align-self:center;">+${set.size - 8}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDetail() {
+  const body = document.getElementById('detailBody');
+  const activationMap = buildActivationMap();
+
+  // 按模块分组
+  const grouped = {};
+  FILES.forEach(f => {
+    const info = getFileInfo(f.path);
+    if (!grouped[info.module]) grouped[info.module] = [];
+    grouped[info.module].push({ file: f, info });
+  });
+
+  let html = '';
+  Object.entries(MODULES).forEach(([modKey, modInfo]) => {
+    const items = grouped[modKey] || [];
+    if (!items.length) return;
+    html += `<h3 style="font-size: 16px; font-weight: 700; color: ${modInfo.color}; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 2px solid ${modInfo.color};">${modInfo.name}（${items.length} 个文件）</h3>`;
+    items.forEach(({ file, info }) => {
+      const activeScenarios = Object.keys(activationMap[file.path] || {});
+      html += `<div class="file-row">
+        <div class="file-path" style="border-left: 3px solid ${modInfo.color}; padding-left: 10px;">${file.path}</div>
+        <div class="file-desc">${info.desc}</div>
+        <div class="file-scenarios">
+          ${activeScenarios.length ? activeScenarios.map(sid => {
+            const s = getScenario(sid);
+            return `<span class="file-tag" style="background: ${s.color};">${sid}</span>`;
+          }).join('') : '<span style="color:var(--text-3);font-size:12px;">未被任何场景激活</span>'}
+        </div>
+      </div>`;
+    });
+  });
+  body.innerHTML = html;
+}
+
+function bindFilter() {
+  const input = document.getElementById('searchInput');
+  input.addEventListener('input', () => {
+    const kw = input.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#matrixTable tbody tr');
+    let visible = 0;
+    rows.forEach(tr => {
+      const path = (tr.dataset.path || '').toLowerCase();
+      const mod = (tr.dataset.module || '').toLowerCase();
+      const match = !kw || path.includes(kw) || mod.includes(kw);
+      tr.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    document.getElementById('filterCount').textContent = kw ? `${visible} 行匹配` : '';
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>

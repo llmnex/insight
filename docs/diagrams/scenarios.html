@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>insight-agent · 6 大典型场景 × 全模块激活图</title>
+<style>
+  :root {
+    --bg-0: #F8FAFC;
+    --bg-1: #FFFFFF;
+    --bg-2: #F1F5F9;
+    --line: rgba(15, 23, 42, 0.08);
+    --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+    --accent-cyan: #0891B2;
+    --accent-blue: #2563EB;
+    --accent-purple: #7C3AED;
+    --accent-pink: #DB2777;
+    --accent-green: #16A34A;
+    --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C;
+    --accent-red: #DC2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #F8FAFC; color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; }
+  body {
+    background-image: linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px), radial-gradient(circle at 20% 20%, rgba(8, 145, 178, 0.06), transparent 50%), radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.06), transparent 50%); background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+    background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+  }
+
+  header { padding: 28px 48px 20px; border-bottom: 1px solid var(--line); position: relative; }
+  header::after { content: ''; position: absolute; left: 48px; right: 48px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent); }
+  h1 { font-size: 43px; font-weight: 600; letter-spacing: 1px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 25px; color: var(--text-3); margin-top: 6px; letter-spacing: 0.5px; }
+  .meta { position: absolute; right: 48px; top: 32px; font-size: 24px; color: var(--text-3); }
+  .meta b { color: var(--accent-cyan); font-weight: 500; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; margin-left: 12px; }
+
+  main { padding: 36px 48px 60px; max-width: 1900px; margin: 0 auto; }
+
+  /* ===== 顶部说明 ===== */
+  .intro {
+    background: linear-gradient(180deg, rgba(0, 229, 255, 0.08), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .intro::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+  }
+  .intro h2 { font-size: 28px; color: var(--accent-cyan); letter-spacing: 1px; margin-bottom: 8px; }
+  .intro p { font-size: 19px; color: var(--text-2); line-height: 1.7; }
+  .intro p b { color: var(--text-1); }
+  .intro code {
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    color: var(--accent-cyan); font-size: 24px;
+    padding: 1px 6px; border-radius: 3px;
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  /* ===== 6 场景网格 ===== */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+  /* 场景卡 */
+  .scene {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .scene::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--scene-color, var(--accent-cyan));
+    box-shadow: 0 0 12px var(--scene-color, var(--accent-cyan));
+  }
+  .scene-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .scene-no {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--scene-color, var(--accent-cyan));
+    color: var(--scene-color, var(--accent-cyan));
+  }
+  .scene-title { font-size: 29px; font-weight: 600; letter-spacing: 0.3px; }
+  .scene-sub { font-size: 15px; color: var(--text-3); margin-top: 2px; letter-spacing: 0.5px; }
+  .scene-tag {
+    margin-left: auto; padding: 3px 10px; border-radius: 20px;
+    font-size: 20px; letter-spacing: 0.5px;
+    background: rgba(0, 229, 255, 0.1); color: var(--scene-color);
+    border: 1px solid var(--scene-color);
+  }
+  .scene-prompt {
+    background: rgba(15, 23, 42, 0.05); border: 1px solid rgba(15, 23, 42, 0.08);
+    border-left: 3px solid var(--scene-color, var(--accent-cyan));
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 18px;
+    color: var(--text-1);
+    font-style: italic;
+    margin: 10px 0 14px;
+  }
+
+  /* 步骤 */
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 10px; background: rgba(15, 23, 42, 0.03);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 6px;
+  }
+  .step-num {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(0, 229, 255, 0.08);
+    color: var(--scene-color, var(--accent-cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 600;
+    border: 1px solid var(--scene-color, var(--accent-cyan));
+  }
+  .step-body { flex: 1; }
+  .step-title { font-size: 24px; color: var(--text-1); font-weight: 500; }
+  .step-title b { color: var(--scene-color, var(--accent-cyan)); }
+  .step-files { font-size: 15px; color: var(--text-3); margin-top: 2px; font-family: ui-monospace, "Cascadia Code", monospace; }
+
+  /* ===== 热力图 ===== */
+  .heatmap {
+    margin-top: 36px;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .heatmap h2 {
+    font-size: 28px; color: var(--accent-cyan); letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .heatmap-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 22px;
+  }
+  .heatmap-table th, .heatmap-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    text-align: center;
+  }
+  .heatmap-table th { color: var(--text-3); font-weight: 500; letter-spacing: 0.5px; }
+  .heatmap-table th:first-child, .heatmap-table td:first-child {
+    text-align: left; color: var(--text-2);
+  }
+  .heatmap-table td.cap { font-family: ui-monospace, "Cascadia Code", monospace; color: var(--text-2); font-size: 21px; }
+  .cell-on { background: rgba(0, 230, 118, 0.18); color: #00E676; font-weight: 600; }
+  .cell-mid { background: rgba(0, 230, 118, 0.10); color: #00E676; }
+  .cell-off { color: var(--text-3); }
+
+  /* 能力点 legend */
+  .legend { margin-top: 14px; font-size: 21px; color: var(--text-3); }
+  .legend .on { display: inline-block; padding: 2px 8px; background: rgba(0, 230, 118, 0.18); color: #00E676; border-radius: 3px; margin-right: 10px; }
+  .legend .mid { display: inline-block; padding: 2px 8px; background: rgba(0, 230, 118, 0.10); color: #00E676; border-radius: 3px; margin-right: 10px; }
+
+  footer { text-align: center; padding: 24px 48px 32px; color: var(--text-3); font-size: 21px; letter-spacing: 0.5px; border-top: 1px solid var(--line); }
+  footer a { color: var(--accent-cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧠 insight-agent · 6 大典型场景 × 全模块激活图</h1>
+  <div class="subtitle">每个真实场景 → 用户提问 → 系统激活了哪些文件 / 哪些能力</div>
+  <div class="meta">场景版本 <b>v1.0</b> · 2026.06 · <a href="../../insight.md">← 主文档</a> · <a href="architecture.html">→ 总架构图</a></div>
+</header>
+
+<main>
+
+  <!-- ===== 顶部说明 ===== -->
+  <div class="intro">
+    <h2>🎯 怎么看这张图</h2>
+    <p>
+      我设计了 <b>6 个典型场景</b>，覆盖 insight-agent <b>全部 20 个核心能力点</b>（鉴权、会话管理、3 层记忆、Agent 装配、本地工具、MCP 工具、Skill 系统、协作式取消、自动重试、消息格式转换、异常体系、附件管理、标题生成、上下文链路、热更新等）。
+    </p>
+    <p style="margin-top: 6px;">
+      每个场景卡片：<b>用户提问 → 系统做了什么（步骤）→ 激活了哪些文件</b>。底部 <b>热力图</b>显示"6 个场景 × 20 个能力点"的覆盖关系——绿色 = 该场景激活了这个能力。
+    </p>
+  </div>
+
+  <!-- ===== 场景 1 ===== -->
+  <div class="grid-3">
+
+    <div class="scene" style="--scene-color: #FF4081;">
+      <div class="scene-head">
+        <div class="scene-no">A</div>
+        <div>
+          <div class="scene-title">首次登录 + 创建对话 + 上传 Excel</div>
+          <div class="scene-sub">Entry · 鉴权 + 会话管理 + 附件</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(255, 64, 129, 0.1); color: #FF4081; border-color: #FF4081;">入口场景</div>
+      </div>
+      <div class="scene-prompt">
+        "商家第一次进入系统：登录 → 创建新对话 → 上传一份'618 销售数据.xlsx' 作为后续分析素材"
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>鉴权</b>：Bearer Token 校验</div>
+            <div class="step-files">core/middlewares/auth.py · core/schemas/auth_schema.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>trace 注入</b>：request_id / trace_id 写入 ContextVar</div>
+            <div class="step-files">core/middlewares/trace.py · core/context.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>创建对话</b>：插入 conversation 表，title="新对话"</div>
+            <div class="step-files">routers/api/chat.py · repositories/conversation_repo.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>上传附件</b>：1MB 分块写工作区，校验路径防逃逸</div>
+            <div class="step-files">routers/api/attachment.py · errors/attachment_error.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>异常兜底</b>：ProblemError → 统一 problem+json 返回</div>
+            <div class="step-files">core/exceptions/base.py · core/exceptions/exc_handlers.py</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 场景 2 ===== -->
+    <div class="scene" style="--scene-color: #FF6E40;">
+      <div class="scene-head">
+        <div class="scene-no">B</div>
+        <div>
+          <div class="scene-title">首次提问：分析 GMV 为什么跌</div>
+          <div class="scene-sub">Core · 标题生成 + Agent 全流程</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(255, 110, 64, 0.1); color: #FF6E40; border-color: #FF6E40;">核心场景</div>
+      </div>
+      <div class="scene-prompt">
+        "分析 6 月 GMV 下滑原因"（首次提问，触发完整归因链路）
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>WebSocket 建连</b>：Redis GETDEL 一次性消费 ws_token</div>
+            <div class="step-files">routers/api/chat.py · repositories/websocket_token_repo.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>加载历史（空）</b>：load_conversation_context，cur_context_seq=-1</div>
+            <div class="step-files">services/chat_service.py · repositories/message_repo.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>标题后台生成</b>：异步调 LLM 生成"6月GMV下滑分析"</div>
+            <div class="step-files">services/chat_service.py:generate_conversation_title</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>用户消息入库</b>：Mapper 三向转换（Schema → Entity → LangChain）</div>
+            <div class="step-files">mappers/message_mapper.py · _add_message 双写</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>Agent 启动</b>：get_agent() 单例 + 工作区懒创建</div>
+            <div class="step-files">agent/agent.py · get_workspace_dir · _backend_factory</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title"><b>insight Skill 加载</b>：进入归因分析工作流</div>
+            <div class="step-files">.deepagents/skills/insight/SKILL.md · CompositeBackend 路由 /skills/</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <div class="step-title"><b>db_query 工具</b>：SSE 调 data-agent → 落 CSV/JSON 到工作区</div>
+            <div class="step-files">agent/tools/db_query.py → data-agent (外部)</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">8</div>
+          <div class="step-body">
+            <div class="step-title"><b>渲染 HTML 报告</b>：uv run render_report.py</div>
+            <div class="step-files">.deepagents/skills/insight/scripts/render_report.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">9</div>
+          <div class="step-body">
+            <div class="step-title"><b>return_file 工具</b>：回传 f_path，前端下载</div>
+            <div class="step-files">agent/tools/return_file.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">10</div>
+          <div class="step-body">
+            <div class="step-title"><b>流式推送</b>：agent_chunk_to_schemas 实时推到前端</div>
+            <div class="step-files">mappers/message_mapper.py · routers/api/chat.py:_TurnStream</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 场景 3 ===== -->
+    <div class="scene" style="--scene-color: #FFD740;">
+      <div class="scene-head">
+        <div class="scene-no">C</div>
+        <div>
+          <div class="scene-title">追问：那 A 渠道呢？</div>
+          <div class="scene-sub">L1/L3 复用 · 历史加载 + 工作区复用</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(255, 215, 64, 0.1); color: #FFD740; border-color: #FFD740;">复用场景</div>
+      </div>
+      <div class="scene-prompt">
+        上一轮归因报告出来后，商家继续追问："那 A 渠道呢？分品类看一下"
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>同 WebSocket 连接</b>：复用 _TurnStream，不重连</div>
+            <div class="step-files">routers/api/chat.py:_TurnStream</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>分配 context_seq</b>：cur_context_seq += 1</div>
+            <div class="step-files">services/chat_service.py:run_agent_turn</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>用户消息双写</b>：DB 入库 + 追加到内存 messages 列表</div>
+            <div class="step-files">_add_message · repositories/message_repo</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>Agent 续跑</b>：传入完整 messages（含历史），工作区路径不变</div>
+            <div class="step-files">agent/agent.py:_execute_agent · RunnableConfig</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>复用工作区</b>：Agent 看到上次的 CSV/JSON/HTML，直接续算</div>
+            <div class="step-files">LocalShellBackend · CompositeBackend 路由</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title"><b>自动重试 (可选)</b>：若 finish_reason≠"stop" 自动续跑</div>
+            <div class="step-files">services/chat_service.py:run_agent_turn while True</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 场景 4 ===== -->
+    <div class="scene" style="--scene-color: #00E676;">
+      <div class="scene-head">
+        <div class="scene-no">D</div>
+        <div>
+          <div class="scene-title">长对话触发上下文压缩</div>
+          <div class="scene-sub">L2 · SummarizationMiddleware + seq_offset</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(0, 230, 118, 0.1); color: #00E676; border-color: #00E676;">L2 记忆</div>
+      </div>
+      <div class="scene-prompt">
+        对话轮次多了，token 接近上限，deepagents 自动触发压缩
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>压缩触发</b>：SummarizationMiddleware 自动触发</div>
+            <div class="step-files">deepagents 中间件链（自动注入）</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>提取压缩事件</b>：从 agent chunk 拿 summary + cutoff_index</div>
+            <div class="step-files">services/chat_service.py:_extract_compaction</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>seq_offset 换算</b>：cutoff_index → 真实 DB 序号 end_seq</div>
+            <div class="step-files">公式：end_seq = seq_offset + cutoff_index</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>立即持久化</b>：本 chunk 处理完就写 DB</div>
+            <div class="step-files">repositories/context_compaction_repo.create</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>收尾改内存</b>：本轮 Agent 跑完才注入 messages</div>
+            <div class="step-files">run_agent_turn 末尾</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title"><b>下次加载应用</b>：load_conversation_context 取最新压缩</div>
+            <div class="step-files">repositories/context_compaction_repo.get_latest_by_conversation_id</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 场景 5 ===== -->
+    <div class="scene" style="--scene-color: #B388FF;">
+      <div class="scene-head">
+        <div class="scene-no">E</div>
+        <div>
+          <div class="scene-title">用户点取消按钮</div>
+          <div class="scene-sub">协作式取消 · asyncio.Event</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(179, 136, 255, 0.1); color: #B388FF; border-color: #B388FF;">中断</div>
+      </div>
+      <div class="scene-prompt">
+        Agent 跑了 30 秒还没结束，商家点 "停止生成" 按钮
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>前端发</b> <code>{"type": "cancel"}</code></div>
+            <div class="step-files">routers/api/chat.py:_TurnStream._listen_cancel</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>set cancel event</b>：asyncio.Event（非 Task.cancel）</div>
+            <div class="step-files">保护 LangGraph 状态机一致性</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>边界检查</b>：Agent 在 chunk 边界检测 cancel.is_set()</div>
+            <div class="step-files">deepagents 内部协作式中断</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>单轮异常隔离</b>：try/except 捕获后 send_error 推送</div>
+            <div class="step-files">routers/api/chat.py:357-374</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>WS 连接不中断</b>：回到 _receive_user_message 等下一条</div>
+            <div class="step-files">routers/api/chat.py 外层循环</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 场景 6 ===== -->
+    <div class="scene" style="--scene-color: #00E5FF;">
+      <div class="scene-head">
+        <div class="scene-no">F</div>
+        <div>
+          <div class="scene-title">热更新配置（修改 insight Skill 后）</div>
+          <div class="scene-sub">热重载 · reload_config + reset_agent</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(0, 229, 255, 0.1); color: #00E5FF; border-color: #00E5FF;">运维</div>
+      </div>
+      <div class="scene-prompt">
+        运营修改了 .deepagents/skills/insight/SKILL.md，希望不重启服务就生效
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>运营触发</b>：<code>curl -X POST /api/reload</code></div>
+            <div class="step-files">routers/api/admin.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>重新加载配置</b>：reload_config() 读最新 .env + config.yml</div>
+            <div class="step-files">core/settings.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>失效 Agent 单例</b>：reset_agent() 把 _agent = None</div>
+            <div class="step-files">agent/agent.py:reset_agent</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>下次请求重建</b>：get_agent() 检测到 None，重新 _build_agent()</div>
+            <div class="step-files">agent/agent.py:get_agent + _agent_lock</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>新 Skill 生效</b>：新 Agent 加载更新后的 SKILL.md</div>
+            <div class="step-files">.deepagents/skills/insight/SKILL.md（运行时读取）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 附加场景：MCP + 删除 ===== -->
+  <div class="grid-2" style="margin-top: 20px;">
+
+    <div class="scene" style="--scene-color: #2979FF;">
+      <div class="scene-head">
+        <div class="scene-no">G</div>
+        <div>
+          <div class="scene-title">调外部搜索工具（MCP）</div>
+          <div class="scene-sub">MCP · MultiServerMCPClient</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(41, 121, 255, 0.1); color: #2979FF; border-color: #2979FF;">MCP 工具</div>
+      </div>
+      <div class="scene-prompt">
+        "2026 年 618 各平台 GMV 怎么样？"（数据库里没有，需要联网搜）
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>Agent 决策</b>：本地工具搞不定，需要外部搜索</div>
+            <div class="step-files">agent/agent.py</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>加载 MCP 工具</b>：MultiServerMCPClient 初始化 4 种传输</div>
+            <div class="step-files">agent/mcp.py · sse/stdio/ws/http</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>工具合并</b>：MCP 工具 + 本地工具统一为 Agent 工具列表</div>
+            <div class="step-files">agent/agent.py:_build_agent</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>调用 tavily_search</b>（sse 协议）</div>
+            <div class="step-files">MCP 服务（外部）</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>结果回传 + 流式推</b></div>
+            <div class="step-files">routers/api/chat.py · mappers/message_mapper</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scene" style="--scene-color: #FF4081;">
+      <div class="scene-head">
+        <div class="scene-no">H</div>
+        <div>
+          <div class="scene-title">删除整个对话</div>
+          <div class="scene-sub">级联清理 · DB + 工作区</div>
+        </div>
+        <div class="scene-tag" style="background: rgba(255, 64, 129, 0.1); color: #FF4081; border-color: #FF4081;">清理</div>
+      </div>
+      <div class="scene-prompt">
+        "删除这条对话"（要彻底清理所有 3 层记忆 + 工作区）
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title"><b>校验归属</b>：get_by_id 校验 user_id</div>
+            <div class="step-files">repositories/conversation_repo</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title"><b>逻辑删除对话</b>：conversation.yn = 0</div>
+            <div class="step-files">repositories/conversation_repo.update</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title"><b>级联禁用消息</b>：所有消息 yn = 0</div>
+            <div class="step-files">repositories/message_repo.update_yn_by_conversation_id</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title"><b>级联禁用压缩</b>：压缩记录 yn = 0</div>
+            <div class="step-files">repositories/context_compaction_repo</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title"><b>删除工作区目录</b>：物理删 .deepagents/workspaces/.../{cid}</div>
+            <div class="step-files">routers/api/chat.py:delete (业务逻辑)</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title"><b>异常兜底</b>：ConversationNotFoundError</div>
+            <div class="step-files">errors/chat_error.py</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 全能力点热力图 ===== -->
+  <div class="heatmap">
+    <h2>📊 20 个核心能力点 × 8 大场景 覆盖热力图</h2>
+    <table class="heatmap-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">能力点 / 模块 / 文件</th>
+          <th>A<br/>登录+建会</th>
+          <th>B<br/>首次提问</th>
+          <th>C<br/>追问</th>
+          <th>D<br/>压缩</th>
+          <th>E<br/>取消</th>
+          <th>F<br/>热更</th>
+          <th>G<br/>MCP</th>
+          <th>H<br/>删会</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="cap">middlewares/auth.py（鉴权）</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">middlewares/trace.py（链路）</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">core/context.py（ContextVar）</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">conversation_repo（会话管理）</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">message_repo（消息持久化 / L1）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">context_compaction_repo（L2）</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">websocket_token_repo（Redis 令牌）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">mappers/message_mapper.py（三向转换）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">services/chat_service.py（业务编排）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">agent/agent.py（Agent 装配 / 单例）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">agent/tools/db_query.py（取数）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">agent/tools/return_file.py（附件回传）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">agent/mcp.py（外部工具）</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">skills/insight/SKILL.md（归因方法论）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">skills/insight/scripts/render_report.py</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">LocalShellBackend + CompositeBackend（L3 工作区）</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">_TurnStream（asyncio.Event 取消）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">自动重试 (while True)</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-mid">◐</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">routers/api/attachment.py（附件）</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">generate_conversation_title（后台异步）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">core/exceptions（异常体系）</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-on">✓</td><td class="cell-mid">◐</td><td class="cell-mid">◐</td><td class="cell-on">✓</td></tr>
+        <tr><td class="cap">core/settings.py（热更新）</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+        <tr><td class="cap">admin.py（/api/reload）</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-off">·</td><td class="cell-on">✓</td><td class="cell-off">·</td><td class="cell-off">·</td></tr>
+      </tbody>
+    </table>
+    <div class="legend">
+      <span class="on">✓</span> 该场景激活了这个能力
+      <span class="mid">◐</span> 可能激活（取决于具体路径，如 L1 / L2 / L3 选择）
+      <span class="on" style="background: var(--bg-2); color: var(--text-3);">·</span> 不激活
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  ⚡ insight-agent project · 场景 × 模块激活图 v1.0 · 2026.06 · <a href="architecture.html">总架构图</a> · <a href="../../insight.md">返回主文档</a>
+</footer>
+
+</body>
+</html>

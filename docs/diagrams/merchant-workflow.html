@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>商家工作台 × AI 调度 · 整体架构</title>
+<style>
+  :root {
+    --bg-0: #F8FAFC;
+    --bg-1: #FFFFFF;
+    --bg-2: #F1F5F9;
+    --line: rgba(15, 23, 42, 0.08);
+    --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+    --accent-cyan: #0891B2;
+    --accent-blue: #2563EB;
+    --accent-purple: #7C3AED;
+    --accent-pink: #DB2777;
+    --accent-green: #16A34A;
+    --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C;
+    --accent-red: #DC2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #F8FAFC; color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; }
+
+  body {
+    background-image: linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px), radial-gradient(circle at 20% 20%, rgba(8, 145, 178, 0.06), transparent 50%), radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.06), transparent 50%); background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+    background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+  }
+
+  header { padding: 28px 48px 20px; border-bottom: 1px solid var(--line); position: relative; }
+  header::after { content: ''; position: absolute; left: 48px; right: 48px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-orange), transparent); }
+  h1 { font-size: 43px; font-weight: 600; letter-spacing: 1px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 25px; color: var(--text-3); margin-top: 6px; letter-spacing: 0.5px; }
+  .meta { position: absolute; right: 48px; top: 32px; font-size: 24px; color: var(--text-3); }
+  .meta b { color: var(--accent-orange); font-weight: 500; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; margin-left: 12px; }
+
+  main { padding: 36px 48px 60px; max-width: 1600px; margin: 0 auto; }
+
+  /* ===== 顶部核心思想框 ===== */
+  .core-idea {
+    background: linear-gradient(180deg, rgba(255, 110, 64, 0.10), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .core-idea::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-orange), var(--accent-cyan));
+  }
+  .core-idea h2 { font-size: 28px; color: var(--accent-orange); letter-spacing: 1px; margin-bottom: 8px; }
+  .core-idea p { font-size: 19px; color: var(--text-2); line-height: 1.7; }
+  .core-idea p b { color: var(--text-1); }
+  .core-idea code {
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    color: var(--accent-cyan); font-size: 24px;
+    padding: 1px 6px; border-radius: 3px;
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  /* ===== 阶段 ===== */
+  .phase { margin-bottom: 24px; }
+  .phase-label { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .phase-no {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 25px;
+    background: rgba(0, 229, 255, 0.08); color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+  }
+  .phase-title { font-size: 28px; color: var(--text-1); font-weight: 600; letter-spacing: 0.5px; }
+  .phase-sub { font-size: 21px; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ===== 网格 ===== */
+  .grid { display: grid; gap: 18px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* ===== 卡片 ===== */
+  .card {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent, var(--accent-cyan));
+    box-shadow: 0 0 12px var(--accent, var(--accent-cyan));
+  }
+  .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    font-size: 39px;
+  }
+  .card-title { font-size: 29px; font-weight: 600; letter-spacing: 0.3px; }
+  .card-sub { font-size: 15px; color: var(--text-3); margin-top: 2px; letter-spacing: 0.5px; }
+  .card-tag {
+    margin-left: auto; padding: 2px 9px; border-radius: 20px;
+    font-size: 20px; letter-spacing: 0.5px;
+    background: rgba(0, 229, 255, 0.1); color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .card-desc { font-size: 18px; color: var(--text-2); line-height: 1.7; }
+  .card-feat { list-style: none; margin-top: 12px; }
+  .card-feat li {
+    font-size: 24px; color: var(--text-1); line-height: 1.7;
+    padding: 3px 0 3px 16px; position: relative;
+  }
+  .card-feat li::before {
+    content: '▸'; position: absolute; left: 0; top: 3px;
+    color: var(--accent); font-size: 20px;
+  }
+  .card-feat b { color: var(--accent); font-weight: 500; }
+
+  /* 配色 */
+  .card--entry     { --accent: var(--accent-pink); }
+  .card--dispatch  { --accent: var(--accent-purple); }
+  .card--attrib    { --accent: var(--accent-orange); }
+  .card--ask       { --accent: var(--accent-green); }
+  .card--rag       { --accent: var(--accent-blue); }
+  .card--ops       { --accent: var(--accent-yellow); }
+  .card--ticket    { --accent: var(--accent-cyan); }
+  .card--output    { --accent: var(--accent-pink); }
+  .card--shared    { --accent: var(--accent-cyan); }
+
+  .card--full { grid-column: 1 / -1; }
+  .card--hero { grid-column: span 1; }
+  .card--big  { grid-column: span 2; }
+
+  /* 归因分析主卡片 - 突出 */
+  .card--primary {
+    background: linear-gradient(180deg, rgba(255, 110, 64, 0.15), var(--bg-1));
+    border-color: var(--accent-orange);
+    box-shadow: 0 0 20px rgba(255, 110, 64, 0.15);
+  }
+  .card--primary::before { height: 3px; box-shadow: 0 0 20px var(--accent-orange); }
+
+  /* 工具卡 - 突出它是"被调用" */
+  .card--tool {
+    background: linear-gradient(180deg, rgba(0, 230, 118, 0.06), var(--bg-1));
+    border-style: dashed;
+  }
+
+  /* 箭头 */
+  .arrow-down { text-align: center; padding: 6px 0; color: var(--accent-orange); font-size: 43px; letter-spacing: 4px; opacity: 0.7; }
+  .arrow-down-thin { text-align: center; padding: 4px 0; color: var(--accent-green); font-size: 31px; letter-spacing: 4px; opacity: 0.6; }
+  .note { text-align: center; font-size: 16px; color: var(--text-3); padding: 4px 0; }
+  .note b { color: var(--accent-orange); }
+  .note code {
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    color: var(--accent-cyan); font-size: 21px;
+    padding: 1px 5px; border-radius: 3px;
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  /* 反向调用条 */
+  .reverse-call {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 14px; padding: 8px 14px;
+    background: rgba(0, 230, 118, 0.08);
+    border: 1px dashed rgba(0, 230, 118, 0.4);
+    border-radius: 6px;
+    color: var(--accent-green);
+    font-size: 24px;
+  }
+  .reverse-call .arrow { font-size: 31px; }
+
+  footer { text-align: center; padding: 24px 48px 32px; color: var(--text-3); font-size: 21px; letter-spacing: 0.5px; border-top: 1px solid var(--line); }
+  footer a { color: var(--accent-cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛒 商家工作台 × AI 调度 · 整体架构</h1>
+  <div class="subtitle">面向 B 端商家（淘宝商家版风格）· 归因分析为主，问数系统为底层工具</div>
+  <div class="meta">架构版本 <b>v1.0</b> · 2026.06 · <a href="../../insight.md">← 主文档</a> · <a href="architecture.html">→ 总架构图</a></div>
+</header>
+
+<main>
+
+  <!-- ===== 核心思想 ===== -->
+  <div class="core-idea">
+    <h2>🎯 核心思想：归因为主，问数为辅</h2>
+    <p>
+      商家在日常工作台里提的问题 <b>90% 是"为什么"型问题</b>（"GMV 跌了为什么？"、"退款率涨了为什么？"），
+      这些问题 <b>都先进入归因分析（<code>insight-agent</code>）</b> 处理；归因过程里会<b>反向调用</b> <code>db_query</code> 工具
+      → 该工具内部走 SSE 到 <b>问数系统（<code>data-agent</code>）</b> 取数。
+      <br/><br/>
+      只有 <b>"是什么/多少"型问题</b>（"上个月 GMV 多少？"、"今天的访客数多少？"）才<b>直接走问数</b>，秒级返回单值。
+    </p>
+  </div>
+
+  <!-- ===== 阶段 1：商家入口 ===== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no">01</div>
+      <div>
+        <div class="phase-title">商家入口（B 端）</div>
+        <div class="phase-sub">Entry · 淘宝商家版风格</div>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card card--entry card--hero">
+        <div class="card-head">
+          <div class="icon">👔</div>
+          <div>
+            <div class="card-title">商家日常工作台</div>
+            <div class="card-sub">Merchant Workbench</div>
+          </div>
+          <div class="card-tag" style="background: rgba(255, 64, 129, 0.1); color: var(--accent-pink); border-color: var(--accent-pink);">入口</div>
+        </div>
+        <div class="card-desc">类似淘宝商家版 / 千牛 / 京东商家助手 / 抖店商家工作台。商家在日常对话窗口里完成"查数 + 经营诊断 + 操作建议"。</div>
+        <ul class="card-feat">
+          <li>用户角色：<b>店长 / 运营 / 老板 / 客服主管</b></li>
+          <li>多平台店铺：淘宝 / 京东 / 抖音 / 拼多多</li>
+          <li>原生操作：上架、改价、发券、看数据、报活动</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">▼ 商家提问（90% 是"为什么"型）</div>
+
+  <!-- ===== 阶段 2：AI 调度层（路由 + 优先级） ===== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no">02</div>
+      <div>
+        <div class="phase-title">AI 调度层（按优先级路由）</div>
+        <div class="phase-sub">Dispatch · 归因优先，问数次之</div>
+      </div>
+    </div>
+    <div class="card card--dispatch card--full">
+      <div class="card-head">
+        <div class="icon">🤖</div>
+        <div>
+          <div class="card-title">意图识别 + 优先级路由</div>
+          <div class="card-sub">AI Assistant for Merchants</div>
+        </div>
+        <div class="card-tag" style="background: rgba(179, 136, 255, 0.1); color: var(--accent-purple); border-color: var(--accent-purple);">调度</div>
+      </div>
+      <ul class="card-feat">
+        <li><b>第 1 优先级：归因分析</b> — 任何涉及"为什么/怎么拆解/怎么改善"的问题都进 <code>insight-agent</code></li>
+        <li><b>第 2 优先级：直接问数</b> — 仅"是多少/查个数"类问题直达 <code>data-agent</code>（<code>db_query</code> 工具背后就是它）</li>
+        <li><b>第 3 优先级：智库 / 操作 / 工单</b> — 知识问答 / 商家工作台原生 API / 危机处理工单</li>
+        <li>统一鉴权复用本项目 <code>auth</code> 服务，商家一次登录全平台通行</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow-down">▼ 主链路：先归因</div>
+
+  <!-- ===== 阶段 3：归因分析（主）====== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no" style="color: var(--accent-orange); border-color: var(--accent-orange); background: rgba(255, 110, 64, 0.1);">★</div>
+      <div>
+        <div class="phase-title" style="color: var(--accent-orange);">归因分析（核心引擎 · 最高优先级）</div>
+        <div class="phase-sub">insight-agent · 商家问题的"主入口"</div>
+      </div>
+    </div>
+    <div class="card card--attrib card--primary card--full">
+      <div class="card-head">
+        <div class="icon">🧠</div>
+        <div>
+          <div class="card-title" style="font-size: 35px;">归因分析 Agent</div>
+          <div class="card-sub">insight-agent · 多维拆解 + 业务结论 + HTML 报告</div>
+        </div>
+        <div class="card-tag" style="background: rgba(255, 110, 64, 0.15); color: var(--accent-orange); border-color: var(--accent-orange); font-size: 21px;">★ 核心引擎</div>
+      </div>
+      <div class="card-desc">商家 90% 的问题都先到这里。Agent 通过 deepagents + insight Skill 把"指标异常"拆解为可落地的"渠道/品类/人群/时间"四维归因报告。</div>
+      <ul class="card-feat">
+        <li><b>触发场景</b>：GMV 跌 / 退款率涨 / 投放效果差 / 选品 / 备货 / 差评危机...</li>
+        <li><b>内部动作</b>：insight Skill 工作流 → 补基线 → 多维拆解 → 异常识别 → HTML 报告</li>
+        <li><b>依赖</b>：执行过程中会<b>反向调</b> <code>db_query</code> 工具取数（见下方）</li>
+        <li><b>输出</b>：HTML 报告 + 一键操作建议 + 工单触发</li>
+        <li><b>响应</b>：分钟级（5-10 分钟）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow-down-thin">▼ 归因过程会反向调 db_query 取数</div>
+
+  <!-- ===== 阶段 4：5 个后端（其中"问数"被归因调用）====== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no">04</div>
+      <div>
+        <div class="phase-title">5 个后端能力</div>
+        <div class="phase-sub">Backends · 问数被归因调用，智库/操作/工单被调度层直调</div>
+      </div>
+    </div>
+    <div class="grid grid-4">
+      <!-- 问数 - 标记为"被归因调用的工具" -->
+      <div class="card card--ask card--tool">
+        <div class="card-head">
+          <div class="icon">📊</div>
+          <div>
+            <div class="card-title">问数（被调工具）</div>
+            <div class="card-sub">data-agent (NL2SQL)</div>
+          </div>
+          <div class="card-tag" style="background: rgba(0, 230, 118, 0.1); color: var(--accent-green); border-color: var(--accent-green); font-size: 20px;">工具</div>
+        </div>
+        <div class="card-desc">归因分析（<code>db_query</code>）的唯一取数出口；也支持商家直接问单值。</div>
+        <ul class="card-feat">
+          <li>对应本项目 <b>data-agent</b></li>
+          <li>Agent 端封装：<b>db_query</b> 工具</li>
+          <li>主要调用方：<b>归因分析</b></li>
+          <li>响应：<b>秒级</b></li>
+        </ul>
+      </div>
+
+      <div class="card card--rag card--hero">
+        <div class="card-head">
+          <div class="icon">📚</div>
+          <div>
+            <div class="card-title">智库</div>
+            <div class="card-sub">RAG</div>
+          </div>
+        </div>
+        <div class="card-desc">商家知识库问答，秒级匹配方法论。</div>
+        <ul class="card-feat">
+          <li>对应 <b>RAG</b> 系统</li>
+          <li>覆盖：上架规则、广告法、运费模板</li>
+          <li>响应：<b>秒级</b></li>
+        </ul>
+      </div>
+
+      <div class="card card--ops card--hero">
+        <div class="card-head">
+          <div class="icon">⚙️</div>
+          <div>
+            <div class="card-title">工作台操作</div>
+            <div class="card-sub">Native Ops</div>
+          </div>
+        </div>
+        <div class="card-desc">商家工作台原生 API（改价 / 发券 / 改库存）。</div>
+        <ul class="card-feat">
+          <li>对应 <b>商家工作台原生接口</b></li>
+          <li>场景：归因报告"建议动作"一键执行</li>
+          <li>响应：<b>毫秒级</b></li>
+        </ul>
+      </div>
+
+      <div class="card card--ticket card--hero">
+        <div class="card-head">
+          <div class="icon">🎫</div>
+          <div>
+            <div class="card-title">工单系统</div>
+            <div class="card-sub">Ticket System</div>
+          </div>
+        </div>
+        <div class="card-desc">危机处理 / 差评补偿 / 物流索赔工单。</div>
+        <ul class="card-feat">
+          <li>对应 <b>客服工单</b> 系统</li>
+          <li>场景：归因报告触发"自动开工单"</li>
+          <li>响应：<b>秒级</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="reverse-call">
+      <span class="arrow">⮌</span>
+      <span>归因分析（insight-agent）执行过程中会<b>反向调</b>问数（db_query → data-agent）取数</span>
+    </div>
+  </div>
+
+  <div class="arrow-down">▼ 商家最终看到的交付物</div>
+
+  <!-- ===== 阶段 5：交付物 ===== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no">05</div>
+      <div>
+        <div class="phase-title">商家最终看到的交付物</div>
+        <div class="phase-sub">Output · 90% 是归因报告</div>
+      </div>
+    </div>
+    <div class="card card--output card--full">
+      <div class="card-head">
+        <div class="icon">📦</div>
+        <div>
+          <div class="card-title">商家工作台最终呈现</div>
+          <div class="card-sub">Unified Result</div>
+        </div>
+        <div class="card-tag" style="background: rgba(255, 64, 129, 0.1); color: var(--accent-pink); border-color: var(--accent-pink);">结果聚合</div>
+      </div>
+      <ul class="card-feat">
+        <li><b>HTML 归因报告</b>（多维拆解 + 业务建议）—— <b>90% 来自归因分析</b></li>
+        <li><b>数字 + 趋势图</b>（取数结果）—— 来自问数（<code>db_query</code> 工具）</li>
+        <li><b>知识问答</b>（方法论引用）—— 来自智库</li>
+        <li><b>一键操作</b>（"按建议改价"按钮）—— 调用工作台原生 API</li>
+        <li><b>工单 / 补偿</b>（差评批量发券等）—— 来自工单系统</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== 阶段 6：共享基础 ===== -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-no">06</div>
+      <div>
+        <div class="phase-title">共享基础设施</div>
+        <div class="phase-sub">Shared Infra</div>
+      </div>
+    </div>
+    <div class="card card--shared card--full">
+      <div class="card-desc" style="text-align: center; padding: 8px 0;">
+        <b>归因 + 问数 + 智库 + 工作台 + 工单</b> 共享：<code>dbmock</code> 数仓（业务数据）+ <code>auth</code> 鉴权（OAuth2 + PKCE）
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  ⚡ insight-agent project · 商家工作台 × AI 调度架构图 v1.0 · 2026.06 · <a href="architecture.html">总架构图</a> · <a href="../../insight.md">返回主文档</a>
+</footer>
+
+</body>
+</html>

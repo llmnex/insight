@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>insight-agent · 30 分钟连续对话 · 端到端测试全模块</title>
+<style>
+  :root {
+    --bg-0: #F8FAFC;
+    --bg-1: #FFFFFF;
+    --bg-2: #F1F5F9;
+    --line: rgba(0, 229, 255, 0.18);
+    --line-strong: rgba(0, 229, 255, 0.45);
+    --accent-cyan: #0891B2;
+    --accent-blue: #2563EB;
+    --accent-purple: #7C3AED;
+    --accent-pink: #DB2777;
+    --accent-green: #16A34A;
+    --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C;
+    --accent-red: #DC2626;
+    --text-1: #0F172A;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #F8FAFC; color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; }
+  body {
+    background-image: linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px), radial-gradient(circle at 20% 20%, rgba(8, 145, 178, 0.06), transparent 50%), radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.06), transparent 50%); background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+    background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+  }
+
+  header { padding: 28px 48px 20px; border-bottom: 1px solid var(--line); position: relative; }
+  header::after { content: ''; position: absolute; left: 48px; right: 48px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-red), transparent); }
+  h1 { font-size: 43px; font-weight: 600; letter-spacing: 1px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 25px; color: var(--text-3); margin-top: 6px; letter-spacing: 0.5px; }
+  .meta { position: absolute; right: 48px; top: 32px; font-size: 24px; color: var(--text-3); }
+  .meta b { color: var(--accent-cyan); font-weight: 500; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; margin-left: 12px; }
+
+  main { padding: 36px 48px 60px; max-width: 1500px; margin: 0 auto; }
+
+  /* ===== 时间线 ===== */
+  .intro {
+    background: linear-gradient(180deg, rgba(0, 229, 255, 0.08), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .intro::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-red));
+  }
+  .intro h2 { font-size: 28px; color: var(--accent-cyan); letter-spacing: 1px; margin-bottom: 8px; }
+  .intro p { font-size: 19px; color: var(--text-2); line-height: 1.7; }
+  .intro p b { color: var(--text-1); }
+  .intro code {
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    color: var(--accent-cyan); font-size: 24px;
+    padding: 1px 6px; border-radius: 3px;
+    background: rgba(0, 229, 255, 0.08);
+  }
+  .intro ul { margin-top: 8px; padding-left: 22px; }
+  .intro li { font-size: 18px; color: var(--text-2); line-height: 1.7; }
+
+  /* 时间线主容器 */
+  .timeline { position: relative; padding-left: 0; }
+  .timeline::before {
+    content: ''; position: absolute; left: 28px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-pink), var(--accent-orange), var(--accent-yellow), var(--accent-green), var(--accent-red));
+    opacity: 0.5;
+  }
+
+  /* 时间线节点 */
+  .event {
+    position: relative; padding-left: 70px; margin-bottom: 24px;
+  }
+  .event-marker {
+    position: absolute; left: 0; top: 4px;
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-1);
+    border: 2px solid var(--event-color, var(--accent-cyan));
+    border-radius: 50%;
+    font-size: 35px; font-weight: 600;
+    color: var(--event-color, var(--accent-cyan));
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+    z-index: 2;
+  }
+  .event-marker::before {
+    content: ''; position: absolute; left: -4px; top: 50%;
+    width: 12px; height: 2px;
+    background: var(--event-color, var(--accent-cyan));
+    transform: translateY(-50%);
+  }
+  .event-content {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    position: relative;
+  }
+  .event-content::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--event-color, var(--accent-cyan));
+    border-radius: 10px 0 0 10px;
+  }
+
+  .event-time {
+    display: inline-block; padding: 2px 10px;
+    background: rgba(0, 229, 255, 0.1);
+    color: var(--event-color, var(--accent-cyan));
+    border: 1px solid var(--event-color, var(--accent-cyan));
+    border-radius: 12px;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: 1px;
+    font-family: ui-monospace, "Cascadia Code", monospace;
+  }
+  .event-title { font-size: 29px; font-weight: 600; color: var(--text-1); margin: 8px 0 4px; }
+  .event-desc { font-size: 18px; color: var(--text-2); line-height: 1.6; margin-bottom: 10px; }
+  .event-prompt {
+    background: rgba(15, 23, 42, 0.05); border: 1px solid rgba(15, 23, 42, 0.08);
+    border-left: 3px solid var(--event-color, var(--accent-cyan));
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 18px;
+    color: var(--text-1);
+    font-style: italic;
+    margin: 8px 0 10px;
+  }
+
+  /* 步骤 */
+  .steps { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 7px 10px; background: rgba(15, 23, 42, 0.03);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 6px;
+  }
+  .step-num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(0, 229, 255, 0.08);
+    color: var(--event-color, var(--accent-cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 600;
+    border: 1px solid var(--event-color, var(--accent-cyan));
+  }
+  .step-body { flex: 1; }
+  .step-text { font-size: 24px; color: var(--text-1); }
+  .step-text b { color: var(--event-color, var(--accent-cyan)); }
+  .step-files { font-size: 15px; color: var(--text-3); margin-top: 2px; font-family: ui-monospace, "Cascadia Code", monospace; }
+
+  /* 异常测试标记 */
+  .test-marker {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 20px; font-weight: 600; letter-spacing: 0.5px;
+    margin-left: 8px;
+    background: rgba(255, 82, 82, 0.15);
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+  }
+  .test-marker.warn {
+    background: rgba(255, 215, 64, 0.15);
+    color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+  }
+
+  /* 异常分支（淡色） */
+  .branch {
+    margin-top: 10px; padding: 10px 14px;
+    background: rgba(255, 82, 82, 0.04);
+    border: 1px dashed rgba(255, 82, 82, 0.3);
+    border-radius: 6px;
+  }
+  .branch-title { font-size: 16px; color: var(--accent-red); font-weight: 600; margin-bottom: 4px; }
+  .branch-text { font-size: 16px; color: var(--text-2); line-height: 1.6; }
+  .branch-text code {
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    color: var(--accent-red); font-size: 15px;
+    background: rgba(255, 82, 82, 0.08);
+    padding: 1px 5px; border-radius: 2px;
+  }
+
+  /* 异常标记 */
+  .exception-block {
+    margin-top: 10px; padding: 10px 14px;
+    background: rgba(255, 82, 82, 0.06);
+    border: 1px solid rgba(255, 82, 82, 0.25);
+    border-radius: 6px;
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    font-size: 21px;
+    color: var(--accent-red);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .exception-block .ok { color: var(--accent-green); }
+
+  /* 最终汇总 */
+  .summary {
+    margin-top: 36px;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .summary h2 { font-size: 28px; color: var(--accent-cyan); letter-spacing: 1px; margin-bottom: 14px; }
+  .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat {
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .stat-num { font-size: 43px; font-weight: 600; color: var(--accent-cyan); }
+  .stat-label { font-size: 21px; color: var(--text-3); margin-top: 4px; letter-spacing: 0.5px; }
+
+  footer { text-align: center; padding: 24px 48px 32px; color: var(--text-3); font-size: 21px; letter-spacing: 0.5px; border-top: 1px solid var(--line); margin-top: 36px; }
+  footer a { color: var(--accent-cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 insight-agent · 30 分钟连续对话 · 端到端测试全模块</h1>
+  <div class="subtitle">一个真实商家跑完 9 步：覆盖所有能力点 + 4 类异常处理验证</div>
+  <div class="meta">测试脚本版本 <b>v1.0</b> · 2026.06 · <a href="../../insight.md">← 主文档</a> · <a href="scenarios.html">→ 离散场景</a></div>
+</header>
+
+<main>
+
+  <!-- ===== 顶部说明 ===== -->
+  <div class="intro">
+    <h2>🎯 这个测试脚本的设计思路</h2>
+    <p>把 <b>6 大典型场景 + 4 类异常处理</b> 串成 <b>9 步真实对话流</b>，模拟一个商家从登录到删对话的 30 分钟全流程。每步都明确：</p>
+    <ul>
+      <li><b>用户操作</b>（真实语气）</li>
+      <li><b>系统响应</b>（步骤）</li>
+      <li><b>激活的文件 / 模块</b>（源码定位）</li>
+      <li><b>异常分支</b>（红色块，演示会触发哪些异常 / 边界）</li>
+    </ul>
+    <p style="margin-top: 8px;">测试覆盖：<b>全部 20 个能力点 + 4 类异常（鉴权/路径逃逸/数据缺失/单轮失败）</b>。</p>
+  </div>
+
+  <!-- ===== 时间线 ===== -->
+  <div class="timeline">
+
+    <!-- ============ Step 1: 登录（含失败） ============ -->
+    <div class="event" style="--event-color: #FF4081;">
+      <div class="event-marker">1</div>
+      <div class="event-content">
+        <span class="event-time">00:00 · 30s</span>
+        <div class="event-title">🔐 登录 + 鉴权 <span class="test-marker">异常测试 1</span></div>
+        <div class="event-desc">商家第一次打开工作台，浏览器请求 `auth` 服务走 OAuth2 + PKCE 流程。</div>
+
+        <div class="event-prompt">"打开 http://app.com/ → 输入账号密码 → 跳转到 auth.com 登录 → 回调到 app.com"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">浏览器 PKCE 流程：生成 <b>code_verifier</b> + <b>code_challenge(S256)</b> + <b>state</b></div>
+            <div class="step-files">auth/web (前端) → auth 服务 /api/authorize</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">auth 服务签发 <b>access_token</b>（写 MySQL access_token 表）</div>
+            <div class="step-files">auth/repositories/access_token_repo</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">insight-agent 收到带 Bearer Token 的请求 → auth middleware 校验</div>
+            <div class="step-files">core/middlewares/auth.py · core/schemas/auth_schema.py</div>
+          </div></div>
+        </div>
+
+        <div class="branch">
+          <div class="branch-title">⚠️ 异常分支 1：Token 失效</div>
+          <div class="branch-text">
+            access_token 过期 / 被撤销 → auth 服务返回 <code>active=false</code> → 触发 <code>InvalidAccessTokenError</code> → 中间件返回 401<br/>
+            前端捕获 401 → 清 localStorage → 重新发起 OAuth2 流程（不影响 WS 之外的请求）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 2: 创建对话 + 上传 Excel（含路径逃逸） ============ -->
+    <div class="event" style="--event-color: #2979FF;">
+      <div class="event-marker">2</div>
+      <div class="event-content">
+        <span class="event-time">00:30 · 1min</span>
+        <div class="event-title">📁 创建对话 + 上传 Excel <span class="test-marker">异常测试 2</span></div>
+        <div class="event-desc">商家新建对话，上传 618 销售数据作为分析素材。</div>
+
+        <div class="event-prompt">"点击『新对话』→ 拖入文件 618_sales.xlsx（1.2MB）"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text"><code>POST /api/chat/create</code> → 插入 conversation 表（title="新对话", is_draft=0）</div>
+            <div class="step-files">routers/api/chat.py · repositories/conversation_repo.create</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text"><code>POST /api/chat/attachment/upload</code> → 1MB 分块写工作区</div>
+            <div class="step-files">routers/api/attachment.py:upload · get_workspace_dir</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">后台启动 <b>标题生成任务</b>（等用户第一条消息触发）</div>
+            <div class="step-files">services/chat_service.py:generate_and_save_title_background</div>
+          </div></div>
+        </div>
+
+        <div class="branch">
+          <div class="branch-title">⚠️ 异常分支 2：路径逃逸攻击</div>
+          <div class="branch-text">
+            黑客尝试 <code>f_path="../../../../etc/passwd"</code> → <code>_build_attachment_path()</code> 解析绝对路径 → 检查是否在 <code>workspace_dir</code> 范围内<br/>
+            超出范围 → 抛 <code>PathTraversalError</code> → 统一异常处理器返回 <code>application/problem+json</code>（403）
+          </div>
+        </div>
+
+        <div class="exception-block">HTTP/1.1 403 Forbidden
+Content-Type: application/problem+json
+
+{
+  "type": "https://errors.insight-agent/path-traversal",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "附件路径 '..%2F..%2Fetc%2Fpasswd' 超出工作区范围",
+  "instance": "/api/chat/attachment/upload"
+}</div>
+      </div>
+    </div>
+
+    <!-- ============ Step 3: 首次提问：分析 GMV 下滑（核心）============ -->
+    <div class="event" style="--event-color: #FF6E40;">
+      <div class="event-marker">3</div>
+      <div class="event-content">
+        <span class="event-time">01:30 · 8min</span>
+        <div class="event-title">🧠 首次提问：分析 GMV 下滑（核心场景）</div>
+        <div class="event-desc">商家发第一条消息，触发完整归因分析链路。**这是 30 分钟的"主轴"**。</div>
+
+        <div class="event-prompt">"分析 6 月 GMV 下滑原因" + 把刚才上传的 618_sales.xlsx 作为参考</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">前端调 <code>POST /api/chat/ws-token</code> → 后端 SETEX 写 Redis（30s TTL）</div>
+            <div class="step-files">routers/api/chat.py · repositories/websocket_token_repo.create</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">前端 <code>WS /api/chat/ws/chat?websocket_token=...&conversation_id=42</code></div>
+            <div class="step-files">routers/api/chat.py:_validate_and_accept</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">Redis <b>GETDEL</b> 一次性消费令牌 → 校验对话归属 → <b>加载历史（空）</b></div>
+            <div class="step-files">load_conversation_context · repositories/message_repo.ls</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text">分配 <b>context_seq=0</b>，用户消息入库（Mapper 三向：Schema → Entity → LangChain）</div>
+            <div class="step-files">mappers/message_mapper · _add_message 双写（DB + 内存）</div>
+          </div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-body">
+            <div class="step-text"><b>get_agent()</b> 单例 + 创建工作区 <code>workspaces/user_1/42/</code>（懒创建）</div>
+            <div class="step-files">agent/agent.py · get_workspace_dir · _backend_factory</div>
+          </div></div>
+          <div class="step"><div class="step-num">6</div><div class="step-body">
+            <div class="step-text">Agent 加载 <b>insight Skill</b>（SKILL.md）→ 进入归因分析工作流</div>
+            <div class="step-files">.deepagents/skills/insight/SKILL.md · CompositeBackend 路由 /skills/</div>
+          </div></div>
+          <div class="step"><div class="step-num">7</div><div class="step-body">
+            <div class="step-text">Agent 调 <b>db_query</b> 工具：SSE 调 data-agent → 拉多维数据 → 落 <code>raw/sales.csv</code> 到工作区</div>
+            <div class="step-files">agent/tools/db_query.py → data-agent (外部) · LocalShellBackend 写文件</div>
+          </div></div>
+          <div class="step"><div class="step-num">8</div><div class="step-body">
+            <div class="step-text">多轮拆解（识别"抖音渠道 -50%"是主因）→ 写 <code>analysis/structured.json</code></div>
+            <div class="step-files">deepagents 内置 write_file 工具 · 内存 messages 列表追加</div>
+          </div></div>
+          <div class="step"><div class="step-num">9</div><div class="step-body">
+            <div class="step-text">执行 <code>uv run render_report.py</code> → 落 <code>outputs/report.html</code>（ECharts）</div>
+            <div class="step-files">.deepagents/skills/insight/scripts/render_report.py</div>
+          </div></div>
+          <div class="step"><div class="step-num">10</div><div class="step-body">
+            <div class="step-text"><b>return_file</b> 工具回传 <code>f_path=outputs/report.html</code> → 前端拼下载 URL</div>
+            <div class="step-files">agent/tools/return_file.py · Message Mapper 转 Attachment</div>
+          </div></div>
+          <div class="step"><div class="step-num">11</div><div class="step-body">
+            <div class="step-text"><b>agent_chunk_to_schemas</b> 流式推送 → WS 实时渲染 → finish_reason="stop"</div>
+            <div class="step-files">mappers/message_mapper · routers/api/chat.py:_TurnStream</div>
+          </div></div>
+          <div class="step"><div class="step-num">12</div><div class="step-body">
+            <div class="step-text">后台异步：<b>generate_conversation_title</b> → 把"新对话"改成"6月GMV下滑分析"</div>
+            <div class="step-files">services/chat_service.py:generate_and_save_title_background</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 4: 追问 A 渠道（L1/L3 复用）============ -->
+    <div class="event" style="--event-color: #FFD740;">
+      <div class="event-marker">4</div>
+      <div class="event-content">
+        <span class="event-time">09:30 · 2min</span>
+        <div class="event-title">🔄 追问：那 A 渠道呢？（L1/L3 复用）</div>
+        <div class="event-desc">商家看完报告继续追问。WS 连接保持不变，复用工作区。</div>
+
+        <div class="event-prompt">"那 A 渠道呢？分品类看一下"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">同 WebSocket 连接，<code>_TurnStream</code> 状态保持</div>
+            <div class="step-files">routers/api/chat.py</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">分配 <b>context_seq=1</b>，用户消息双写（DB + 内存）</div>
+            <div class="step-files">_add_message · services/chat_service.run_agent_turn</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">Agent 续跑：传入完整 messages（12 条）+ 同一 workspace_dir</div>
+            <div class="step-files">agent/agent.py:_execute_agent · RunnableConfig(configurable={"workspace_dir":...})</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text">复用工作区：Agent 看到上次的 <code>raw/sales.csv</code> <code>analysis/structured.json</code> <code>outputs/report.html</code></div>
+            <div class="step-files">LocalShellBackend · CompositeBackend</div>
+          </div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-body">
+            <div class="step-text">再调 <b>db_query</b> 拉 A 渠道分品类数据 → 在已有工作区里新增 <code>raw/channel_a.csv</code></div>
+            <div class="step-files">agent/tools/db_query.py</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 5: 继续追问：调外部搜索（MCP）============ -->
+    <div class="event" style="--event-color: #00E5FF;">
+      <div class="event-marker">5</div>
+      <div class="event-content">
+        <span class="event-time">11:30 · 1min</span>
+        <div class="event-title">🌐 追问：调外部搜索行业数据（MCP）</div>
+        <div class="event-desc">数据库里没有 2026 年 618 全行业数据，需要联网搜。</div>
+
+        <div class="event-prompt">"2026 年全行业 618 GMV 总和大概多少？"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">Agent 决策：db_query 查不到，需要外部搜索</div>
+            <div class="step-files">deepagents 推理</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">Agent 调 <b>tavily_search</b>（MCP 工具，sse 协议）</div>
+            <div class="step-files">agent/mcp.py:MultiServerMCPClient · config.yml 配置</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">结果回传（sse 流式），Agent 继续推理 + 整合数据库数据</div>
+            <div class="step-files">deepagents 中间件链</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 6: 触发取消 + 异常分支 ============ -->
+    <div class="event" style="--event-color: #B388FF;">
+      <div class="event-marker">6</div>
+      <div class="event-content">
+        <span class="event-time">12:30 · 1min</span>
+        <div class="event-title">⏹️ 用户点取消按钮 <span class="test-marker">异常测试 3</span></div>
+        <div class="event-desc">商家觉得 Agent 跑太久，主动取消；接着再发一条问数据缺失场景。</div>
+
+        <div class="event-prompt">（Agent 还在跑）点击"停止生成" → 然后问："查一下我们上周的退款金额"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">前端发 <code>{"type": "cancel"}</code> → <code>_listen_cancel</code> 收到</div>
+            <div class="step-files">routers/api/chat.py:_TurnStream</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text"><b>asyncio.Event.set()</b>（不是 Task.cancel）→ 保护 LangGraph 状态机</div>
+            <div class="step-files">_TurnStream.cancel</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">Agent 在 chunk 边界检测到 <code>cancel.is_set()</code> → 跳出 astream 循环</div>
+            <div class="step-files">deepagents 协作式中断</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text">推流 <code>finish_reason="stop"</code>（被取消也算 stop）→ 前端停止渲染</div>
+            <div class="step-files">routers/api/chat.py · mappers/message_mapper</div>
+          </div></div>
+        </div>
+
+        <div class="branch">
+          <div class="branch-title">⚠️ 异常分支 3：WS 异常断开</div>
+          <div class="branch-text">
+            用户直接关闭浏览器 → <code>disconnected = True</code> → 同样 set cancel → 但已生成的消息都已双写到 DB<br/>
+            重新打开页面时，<code>load_conversation_context</code> 仍能加载完整历史（不丢数据）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 7: 触发了 L2 压缩（含自动重试）============ -->
+    <div class="event" style="--event-color: #00E676;">
+      <div class="event-marker">7</div>
+      <div class="event-content">
+        <span class="event-time">13:30 · 15min</span>
+        <div class="event-title">🗜️ 长对话触发 L2 压缩 + 自动重试 <span class="test-marker">异常测试 4</span></div>
+        <div class="event-desc">商家继续追问 20+ 轮，对话越来越长，触发 <code>SummarizationMiddleware</code> 自动压缩；中途还遇到 finish_reason≠"stop" 触发自动重试。</div>
+
+        <div class="event-prompt">（商家连续 20 轮追问细节："退款率"、"客单价"、"复购"、"新客占比"……）</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">累计 context 接近上限 → <b>SummarizationMiddleware</b> 触发</div>
+            <div class="step-files">deepagents 中间件链</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">提取 <code>_summarization_event</code> → <b>seq_offset 换算</b> → 持久化到 context_compaction 表</div>
+            <div class="step-files">chat_service.py:_extract_compaction · context_compaction_repo.create</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">本轮 Agent 跑完后才把 summary 注入内存 messages</div>
+            <div class="step-files">run_agent_turn 末尾</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text">某一轮模型输出 <code>finish_reason="length"</code>（token 截断）</div>
+            <div class="step-files">deepagents 推理</div>
+          </div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-body">
+            <div class="step-text">外层 <code>while True</code> 检测到 ≠"stop" → 同一个 messages 列表<b>自动重试</b></div>
+            <div class="step-files">services/chat_service.py:run_agent_turn</div>
+          </div></div>
+        </div>
+
+        <div class="branch">
+          <div class="branch-title">⚠️ 异常分支 4：连续 3 次都截断</div>
+          <div class="branch-text">
+            自动重试 3 次后仍 <code>finish_reason="length"</code> → 推送 <code>"模型调用失败，请稍后重试。"</code><br/>
+            WS 连接<b>不中断</b>，回到 <code>_receive_user_message()</code> 等下一条用户消息
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 8: 运营热更新 ============ -->
+    <div class="event" style="--event-color: #2979FF;">
+      <div class="event-marker">8</div>
+      <div class="event-content">
+        <span class="event-time">28:30 · 1min</span>
+        <div class="event-title">🔄 运营热更新配置</div>
+        <div class="event-desc">商家提问过程中，运营同时调 <code>/api/reload</code> 更新 Skill 模板。</div>
+
+        <div class="event-prompt">（运营在另一台机器）<code>curl -X POST http://127.0.0.1:7300/api/reload</code></div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text">Bearer Token 鉴权 → 调 <code>reload_config()</code> 重读 .env + config.yml</div>
+            <div class="step-files">routers/api/admin.py · core/settings.py:reload_config</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text"><code>reset_agent()</code> 把 <code>_agent = None</code>（单例失效）</div>
+            <div class="step-files">agent/agent.py</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text"><b>当前对话不中断</b>（in-flight 的 Agent 已拿到旧实例）</div>
+            <div class="step-files">单例失效仅影响下次 get_agent()</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text">商家下一条消息进来 → <code>get_agent()</code> 检测到 None → <code>_build_agent()</code> 重建 → 新 Skill 生效</div>
+            <div class="step-files">agent/agent.py:get_agent + _agent_lock</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Step 9: 删除对话（级联清理）============ -->
+    <div class="event" style="--event-color: #FF4081;">
+      <div class="event-marker">9</div>
+      <div class="event-content">
+        <span class="event-time">29:30 · 30s</span>
+        <div class="event-title">🗑️ 删除对话（级联清理）</div>
+        <div class="event-desc">30 分钟用完，商家清理不再需要的对话，触发 3 层记忆全清理。</div>
+
+        <div class="event-prompt">"删除这条对话"</div>
+
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body">
+            <div class="step-text"><code>POST /api/chat/delete</code> → 遍历 IDs → 校验归属</div>
+            <div class="step-files">routers/api/chat.py · repositories/conversation_repo.get_by_id</div>
+          </div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body">
+            <div class="step-text">对话表 <code>yn=0</code>（逻辑删除）</div>
+            <div class="step-files">repositories/conversation_repo.update</div>
+          </div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body">
+            <div class="step-text">级联禁用：消息表 yn=0 + 压缩表 yn=0</div>
+            <div class="step-files">message_repo / context_compaction_repo:update_yn_by_conversation_id</div>
+          </div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body">
+            <div class="step-text"><b>物理删除工作区目录</b> <code>workspaces/user_1/42/</code>（raw/ analysis/ outputs 全删）</div>
+            <div class="step-files">routers/api/chat.py:delete 业务逻辑</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 最终汇总 ===== -->
+  <div class="summary">
+    <h2>📊 30 分钟测试覆盖汇总</h2>
+    <div class="summary-stats">
+      <div class="stat"><div class="stat-num">9</div><div class="stat-label">测试步骤</div></div>
+      <div class="stat"><div class="stat-num">~50</div><div class="stat-label">激活的能力点</div></div>
+      <div class="stat"><div class="stat-num">4</div><div class="stat-label">异常分支验证</div></div>
+      <div class="stat"><div class="stat-num">~30</div><div class="stat-label">涉及源码文件</div></div>
+    </div>
+
+    <h2 style="margin-top: 28px;">✅ 测试覆盖矩阵</h2>
+    <table style="width:100%; border-collapse: collapse; font-size: 24px; margin-top: 10px;">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--line);">
+          <th style="text-align:left; padding: 10px; color: var(--text-3);">能力点</th>
+          <th style="padding: 8px; color: var(--text-3);">Step1</th>
+          <th style="padding: 8px; color: var(--text-3);">2</th>
+          <th style="padding: 8px; color: var(--text-3);">3</th>
+          <th style="padding: 8px; color: var(--text-3);">4</th>
+          <th style="padding: 8px; color: var(--text-3);">5</th>
+          <th style="padding: 8px; color: var(--text-3);">6</th>
+          <th style="padding: 8px; color: var(--text-3);">7</th>
+          <th style="padding: 8px; color: var(--text-3);">8</th>
+          <th style="padding: 8px; color: var(--text-3);">9</th>
+        </tr>
+      </thead>
+      <tbody style="color: var(--text-2);">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">middlewares/auth.py 鉴权</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">middlewares/trace.py 链路</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">core/context.py ContextVar</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">conversation_repo</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">message_repo (L1 持久化)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">context_compaction_repo (L2)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">websocket_token_repo (Redis)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">mappers/message_mapper</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">services/chat_service.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">agent/agent.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">agent/tools/db_query.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">agent/tools/return_file.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:center; color: var(--text-3); padding: 6px;">agent/mcp.py (MultiServerMCPClient)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">skills/insight/SKILL.md</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255; padding: 6px;">,0.04);"><td style="text-align:left; padding: 6px;">skills/insight/scripts/render_report.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">LocalShellBackend + CompositeBackend (L3)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">_TurnStream (asyncio.Event 取消)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:center; color: var(--text-3); padding: 6px;">自动重试 (while True)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">routers/api/attachment.py</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">generate_conversation_title</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">core/exceptions (RFC 9457)</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: #00E676;">✓</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">core/settings.py (热更新)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);"><td style="text-align:left; padding: 6px;">admin.py (/api/reload)</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: var(--text-3);">·</td><td style="text-align:center; color: #00E676;">✓</td><td style="text-align:center; color: var(--text-3);">·</td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top: 20px; font-size: 24px; color: var(--text-3); text-align: center;">
+      ✓ = 激活 &nbsp;&nbsp; · = 不激活 &nbsp;&nbsp; 测试 9 步覆盖 insight-agent <b>全部 22 个能力点 + 4 类异常处理</b>
+    </p>
+  </div>
+
+</main>
+
+<footer>
+  ⚡ insight-agent project · 30 分钟端到端测试脚本 v1.0 · 2026.06 · <a href="scenarios.html">← 离散场景</a> · <a href="architecture.html">总架构图</a> · <a href="../../insight.md">返回主文档</a>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>归因分析项目 · 总体架构</title>
+<style>
+  :root {
+    --bg-0: #F8FAFC;
+    --bg-1: #FFFFFF;
+    --bg-2: #F1F5F9;
+    --line: rgba(15, 23, 42, 0.08);
+    --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+    --accent-cyan: #0891B2;
+    --accent-blue: #2563EB;
+    --accent-purple: #7C3AED;
+    --accent-pink: #DB2777;
+    --accent-green: #16A34A;
+    --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C;
+    --accent-red: #DC2626;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #F8FAFC; color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  /* 背景网格 */
+  body {
+    background-image: linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px), radial-gradient(circle at 20% 20%, rgba(8, 145, 178, 0.06), transparent 50%), radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.06), transparent 50%); background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+    background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100%;
+  }
+
+  header {
+    padding: 28px 48px 20px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  header::after {
+    content: ''; position: absolute; left: 48px; right: 48px; bottom: -1px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  }
+  h1 {
+    font-size: 43px; font-weight: 600; letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtitle { font-size: 25px; color: var(--text-3); margin-top: 6px; letter-spacing: 0.5px; }
+  .meta { position: absolute; right: 48px; top: 32px; font-size: 24px; color: var(--text-3); }
+  .meta b { color: var(--accent-cyan); font-weight: 500; }
+
+  /* 主容器 */
+  .layout {
+    padding: 36px 48px;
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* 卡片通用 */
+  .card {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent, var(--accent-cyan));
+    box-shadow: 0 0 12px var(--accent, var(--accent-cyan));
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+
+  .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    font-size: 39px;
+  }
+  .card-title { font-size: 31px; font-weight: 600; letter-spacing: 0.5px; }
+  .card-sub { font-size: 21px; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+  .card-tag {
+    margin-left: auto; padding: 3px 10px; border-radius: 20px;
+    font-size: 20px; letter-spacing: 1px; text-transform: uppercase;
+    background: rgba(0, 229, 255, 0.1); color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  .desc { font-size: 25px; color: var(--text-2); line-height: 1.7; margin-bottom: 16px; }
+
+  .feat-list { list-style: none; }
+  .feat-list li {
+    font-size: 18px; color: var(--text-1); line-height: 1.6;
+    padding: 5px 0 5px 18px; position: relative;
+  }
+  .feat-list li::before {
+    content: '▸'; position: absolute; left: 0; top: 5px;
+    color: var(--accent); font-size: 21px;
+  }
+  .feat-list li b { color: var(--accent); font-weight: 500; }
+
+  .tech { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .tech span {
+    font-size: 15px; padding: 3px 9px; border-radius: 4px;
+    background: rgba(0, 229, 255, 0.06); color: var(--text-2);
+    border: 1px solid var(--line);
+    font-family: ui-monospace, "Cascadia Code", monospace;
+  }
+
+  /* 模块差异化 */
+  .card--client     { --accent: var(--accent-pink); }
+  .card--agent      { --accent: var(--accent-orange); }
+  .card--data       { --accent: var(--accent-green); }
+  .card--auth       { --accent: var(--accent-purple); }
+  .card--infra      { --accent: var(--accent-cyan); }
+  .card--mock       { --accent: var(--accent-yellow); }
+
+  /* 核心模块大尺寸 */
+  .card--hero { grid-column: span 1; }
+  .card--hero .icon { width: 50px; height: 50px; font-size: 48px; }
+  .card--hero .card-title { font-size: 35px; }
+
+  /* 顶部"为什么是这套架构"说明 */
+  .why {
+    grid-column: 1 / -1;
+    background: linear-gradient(180deg, rgba(179, 136, 255, 0.08), var(--bg-1));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 28px;
+    display: flex; gap: 24px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .why::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+  }
+  .why-icon { font-size: 48px; }
+  .why h3 { font-size: 28px; color: var(--accent-cyan); letter-spacing: 1px; margin-bottom: 6px; }
+  .why p { font-size: 19px; color: var(--text-2); line-height: 1.7; }
+  .why p b { color: var(--text-1); }
+
+  /* 底部数据流提示 */
+  .flow {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    padding: 20px 24px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    text-align: center;
+    font-size: 18px;
+    color: var(--text-2);
+    background: rgba(0, 229, 255, 0.03);
+  }
+  .flow b { color: var(--accent-cyan); margin: 0 4px; }
+  .arrow { display: inline-block; margin: 0 10px; color: var(--accent-cyan); font-weight: bold; }
+
+  footer {
+    text-align: center; padding: 24px 48px 32px;
+    color: var(--text-3); font-size: 21px; letter-spacing: 0.5px;
+    border-top: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ 归因分析项目 · 总体架构</h1>
+  <div class="subtitle">A two-line summary: 用户提问 → Agent 取数 + 推理 → 产出 HTML 报告，所有中间产物落工作区可追溯</div>
+  <div class="meta">架构版本 <b>v1.0</b> · 2026.06 · <a href="../insight.md" style="color: var(--accent-cyan); text-decoration: none;">主文档 →</a></div>
+</header>
+
+<div class="layout">
+
+  <!-- 顶部 WHY -->
+  <div class="why">
+    <div class="why-icon">🎯</div>
+    <div>
+      <h3>WHY · 这套架构要解决什么问题</h3>
+      <p>业务方提"为什么 GMV 跌了 20%" → <b>不能只给一个数字</b>，要拆到渠道/品类/人群/时间维度给出可落地结论。
+      传统做法要分析师写 SQL+出报告（天级），现在用 <b>LLM Agent + Skill</b> 把归因方法论固化，5-10 分钟自助完成，过程全可追溯。</p>
+    </div>
+  </div>
+
+  <!-- 模块 1：前端 -->
+  <div class="card card--client card--hero">
+    <div class="card-head">
+      <div class="icon">🖥️</div>
+      <div>
+        <div class="card-title">前端 · auth/web</div>
+        <div class="card-sub">Frontend · React 19 SPA</div>
+      </div>
+      <div class="card-tag" style="background: rgba(255, 64, 129, 0.1); color: var(--accent-pink); border-color: var(--accent-pink);">用户入口</div>
+    </div>
+    <p class="desc">浏览器端 SPA，由 insight-agent 后端静态托管。负责登录态、对话列表、WebSocket 流式渲染、报告查看。</p>
+    <ul class="feat-list">
+      <li><b>OAuth2 + PKCE</b> 登录，跳转 auth 服务换取 access_token</li>
+      <li><b>WebSocket</b> 流式接收 assistant 文本 + 工具调用 + 工具结果</li>
+      <li><b>附件下载</b> / 历史消息分页 / 草稿对话管理</li>
+      <li>权限管理页：用户/角色/权限三列联动筛选 + 关系编辑</li>
+    </ul>
+    <div class="tech">
+      <span>React 19</span><span>Vite</span><span>Bun</span><span>shadcn/ui</span><span>TanStack Query</span><span>Zustand</span><span>React Router 7</span>
+    </div>
+  </div>
+
+  <!-- 模块 2：insight-agent 核心（占大） -->
+  <div class="card card--agent card--hero" style="grid-column: span 1;">
+    <div class="card-head">
+      <div class="icon">🧠</div>
+      <div>
+        <div class="card-title">insight-agent · 核心智能体</div>
+        <div class="card-sub">Core Agent · FastAPI + deepagents</div>
+      </div>
+      <div class="card-tag" style="background: rgba(255, 110, 64, 0.1); color: var(--accent-orange); border-color: var(--accent-orange);">项目主体</div>
+    </div>
+    <p class="desc">基于 <b>deepagents (LangGraph)</b> 框架，装配 LLM + 工具 + Skill + 工作区，提供对话、流式聊天、文件落盘、热更新 Agent 实例。</p>
+    <ul class="feat-list">
+      <li><b>3 层记忆</b>：MySQL 消息流 + 上下文压缩 + 对话级工作区文件</li>
+      <li><b>WebSocket 长连接</b>，单轮失败不影响连接，协作式取消</li>
+      <li><b>5 个 Skill</b>：insight(归因) / docx / pdf / pptx / xlsx</li>
+      <li><b>MCP 工具</b>：tavily_search 等外部能力即插即用</li>
+      <li><b>自动重试</b> + <b>上下文压缩</b>（seq_offset 换算对齐 DB 序号）</li>
+      <li><b>热更新</b>：<code>POST /api/reload</code> 不重启重建 Agent</li>
+    </ul>
+    <div class="tech">
+      <span>FastAPI</span><span>deepagents</span><span>LangGraph</span><span>langchain-openai</span><span>SQLAlchemy</span><span>loguru</span><span>omegaconf</span>
+    </div>
+  </div>
+
+  <!-- 模块 3：data-agent -->
+  <div class="card card--data card--hero">
+    <div class="card-head">
+      <div class="icon">📊</div>
+      <div>
+        <div class="card-title">data-agent · 数据查询</div>
+        <div class="card-sub">Text-to-SQL Service</div>
+      </div>
+      <div class="card-tag" style="background: rgba(0, 230, 118, 0.1); color: var(--accent-green); border-color: var(--accent-green);">数据接入</div>
+    </div>
+    <p class="desc">被 insight-agent 的 <code>db_query</code> 工具以 SSE 方式调用的"取数大脑"，把自然语言问句翻译成 SQL 并执行。</p>
+    <ul class="feat-list">
+      <li><b>Elasticsearch 索引数仓元数据</b>，不把 schema 写进 prompt</li>
+      <li>LLM 生成 SQL → 查 MySQL → 表格落 CSV / 非表格落 JSON</li>
+      <li>返回 <code>pandas_read_hint</code> 方便 Agent 后续读取</li>
+      <li>SSE 流式输出，与 insight-agent 异步架构对齐</li>
+    </ul>
+    <div class="tech">
+      <span>FastAPI</span><span>Elasticsearch</span><span>LangChain</span><span>SSE</span>
+    </div>
+  </div>
+
+  <!-- 模块 4：auth -->
+  <div class="card card--auth card--hero">
+    <div class="card-head">
+      <div class="icon">🔐</div>
+      <div>
+        <div class="card-title">auth · 统一认证</div>
+        <div class="card-sub">OAuth2 + PKCE Identity</div>
+      </div>
+      <div class="card-tag" style="background: rgba(179, 136, 255, 0.1); color: var(--accent-purple); border-color: var(--accent-purple);">身份中心</div>
+    </div>
+    <p class="desc">项目所有对外 HTTP 服务的统一身份中心。前后端分离 + 多端场景的标准选择。</p>
+    <ul class="feat-list">
+      <li><b>OAuth2 Authorization Code + PKCE(S256)</b>，防授权码被截</li>
+      <li><b>introspection</b> 端点实时校验 token，<b>支持立即撤销</b></li>
+      <li>用户 / 角色 / 权限 / 关系全套 CRUD，管理员 RBAC</li>
+      <li>密码 / 邮箱变更级联使旧 session/token 失效</li>
+    </ul>
+    <div class="tech">
+      <span>FastAPI</span><span>SQLAlchemy</span><span>OAuth2</span><span>PKCE</span>
+    </div>
+  </div>
+
+  <!-- 模块 5：基础设施 -->
+  <div class="card card--infra card--hero">
+    <div class="card-head">
+      <div class="icon">🏗️</div>
+      <div>
+        <div class="card-title">基础设施</div>
+        <div class="card-sub">Infra · MySQL · Redis · ES · LLM</div>
+      </div>
+      <div class="card-tag" style="background: rgba(0, 229, 255, 0.1); color: var(--accent-cyan); border-color: var(--accent-cyan);">依赖</div>
+    </div>
+    <p class="desc">项目依赖的外部 / 内部基础设施。docker-compose 一键拉起 MySQL + Redis。</p>
+    <ul class="feat-list">
+      <li><b>MySQL</b>：存 conversation / message / context_compaction</li>
+      <li><b>Redis</b>：WebSocket 一次性令牌（30s TTL）</li>
+      <li><b>Elasticsearch</b>：数仓元数据索引（供 data-agent 检索）</li>
+      <li><b>LLM 服务</b>：兼容 OpenAI 协议，可本地或云端部署</li>
+    </ul>
+    <div class="tech">
+      <span>MySQL 8</span><span>Redis 7</span><span>Elasticsearch 8</span><span>OpenAI-Compatible LLM</span>
+    </div>
+  </div>
+
+  <!-- 模块 6：dbmock -->
+  <div class="card card--mock card--hero">
+    <div class="card-head">
+      <div class="icon">🗃️</div>
+      <div>
+        <div class="card-title">dbmock · 业务数据源</div>
+        <div class="card-sub">Data Mock · 离线数仓生成</div>
+      </div>
+      <div class="card-tag" style="background: rgba(255, 215, 64, 0.1); color: var(--accent-yellow); border-color: var(--accent-yellow);">测试数据</div>
+    </div>
+    <p class="desc">构造一份能跑归因分析的离线业务数据库，给 data-agent 提供真实可查的素材。SQLAlchemy + Faker 批量生成。</p>
+    <ul class="feat-list">
+      <li><b>5 批次生成</b>：静态维度 → 商品 → 营销 → 交易核心 → 行为</li>
+      <li><b>SCD 拉链 + 日快照</b> 混用，符合数仓设计</li>
+      <li><b>订单状态机</b> 驱动交易链路，618 / 双11 / 双12 峰</li>
+      <li>运税费分摊、退款退款支付、库存联动全部模拟</li>
+    </ul>
+    <div class="tech">
+      <span>SQLAlchemy 2.0</span><span>Faker</span><span>sqlfluff</span>
+    </div>
+  </div>
+
+  <!-- 数据流提示 -->
+  <div class="flow">
+    数据流向 ·<b>浏览器</b> → WS / HTTP →<b>insight-agent</b> → SSE →<b>data-agent</b> → SQL →<b>数仓 (dbmock 生成)</b>
+    <br/>鉴权链路 ·<b>浏览器</b> → /auth-api/* 反代 →<b>auth</b> → introspection →<b>insight-agent</b>
+  </div>
+
+</div>
+
+<footer>
+  ⚡ insight-agent project · 架构图 v1.0 · 2026.06 · <a href="../insight.md" style="color: var(--accent-cyan); text-decoration: none;">返回主文档</a> · <a href="sequence.html" style="color: var(--accent-cyan); text-decoration: none;">查看时序图</a>
+</footer>
+
+</body>
+</html>

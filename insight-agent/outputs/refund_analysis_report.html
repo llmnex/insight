@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>近 3 个月退款额度分析</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      if (!window.echarts || !window.__insightEchartsQueue) {
+        return;
+      }
+      window.__insightEchartsQueue.forEach(function (item) {
+        const el = document.getElementById(item.id);
+        const optionEl = document.getElementById(item.optionId);
+        if (!el || !optionEl) {
+          return;
+        }
+        const option = JSON.parse(optionEl.textContent || "{}");
+        const chart = window.echarts.init(el);
+        chart.setOption(option);
+        window.addEventListener("resize", function () {
+          chart.resize();
+        });
+      });
+    });
+  </script>
+    
+  <style>
+    :root {
+      --bg: #f6efe6;
+      --paper: rgba(255, 252, 247, 0.95);
+      --paper-strong: #fffdf9;
+      --ink: #221d18;
+      --muted: #6f655a;
+      --line: #dfd3c6;
+      --brand: #b5542e;
+      --brand-soft: #f4dccf;
+      --accent: #1c6660;
+      --accent-soft: #dbeceb;
+      --warn: #9a4d26;
+      --warn-soft: #f6dfd0;
+      --shadow: 0 20px 50px rgba(84, 58, 34, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      line-height: 1.6;
+      background:
+        radial-gradient(circle at top left, rgba(181, 84, 46, 0.14), transparent 25%),
+        radial-gradient(circle at top right, rgba(28, 102, 96, 0.14), transparent 22%),
+        linear-gradient(180deg, #f7f1e9 0%, #f3ece3 100%);
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    .hero, .panel, .callout {
+      background: var(--paper);
+      border: 1px solid rgba(223, 211, 198, 0.92);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero {
+      padding: 32px;
+      background: linear-gradient(135deg, rgba(255,253,249,0.98), rgba(247,238,229,0.98));
+    }
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+    }
+    .subtitle, .meta-line {
+      margin: 0;
+      color: var(--muted);
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .tag-chip {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(28, 102, 96, 0.08);
+      color: var(--accent);
+      font-size: 12px;
+    }
+    .panel, .callout {
+      margin-top: 24px;
+      padding: 24px;
+    }
+    .block-head {
+      margin-bottom: 18px;
+    }
+    .block-head h2 {
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+    .block-head p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .prose-block p, .callout-body p {
+      margin: 10px 0 0;
+    }
+    .content-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .content-list li {
+      margin: 8px 0;
+    }
+    .metrics-grid, .info-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .metric-card, .info-card, .column-card {
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .metric-label, .info-card-label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .metric-value, .info-card-value {
+      margin-top: 8px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .metric-note, .info-card-body {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .table-scroll {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--paper-strong);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    th {
+      color: var(--muted);
+      background: #fbf5ef;
+      font-weight: 600;
+    }
+    .chart-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 110px;
+      gap: 12px;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .chart-label, .chart-value {
+      font-size: 14px;
+    }
+    .chart-bar-wrap {
+      height: 12px;
+      border-radius: 999px;
+      background: #eee1d5;
+      overflow: hidden;
+    }
+    .chart-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--brand), #e09755);
+    }
+    .chart-empty {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .echarts-canvas {
+      width: 100%;
+      min-height: 240px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7f1 100%);
+      border: 1px solid var(--line);
+      padding: 8px;
+    }
+    .line-chart-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .line-chart-svg {
+      width: 100%;
+      height: auto;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7f1 100%);
+      border: 1px solid var(--line);
+      padding: 8px;
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .chart-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .chart-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .line-point-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .line-point-card {
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .line-point-series {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .line-point-label {
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .line-point-value {
+      margin-top: 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .callout-info {
+      border-left: 6px solid var(--accent);
+      background: linear-gradient(135deg, rgba(219,236,235,0.76), rgba(255,252,247,0.98));
+    }
+    .callout-warn {
+      border-left: 6px solid var(--warn);
+      background: linear-gradient(135deg, rgba(246,223,208,0.88), rgba(255,252,247,0.98));
+    }
+    .callout-success {
+      border-left: 6px solid #3b7f52;
+      background: linear-gradient(135deg, rgba(221,238,225,0.88), rgba(255,252,247,0.98));
+    }
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .column-title {
+      margin-bottom: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--brand);
+    }
+    .column-card .panel, .column-card .callout {
+      margin-top: 16px;
+      box-shadow: none;
+    }
+    @media (max-width: 720px) {
+      .hero, .panel, .callout {
+        padding: 20px;
+        border-radius: 18px;
+      }
+      .chart-row {
+        grid-template-columns: 1fr;
+      }
+      th, td {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    
+    <section class="hero">
+      <div class="eyebrow">退款归因分析报告</div>
+      <h1>近 3 个月退款额度分析</h1>
+      <p class="subtitle">2026-03-01 ~ 2026-06-08 · 按退款成功时间口径</p>
+      <p class="meta-line">生成时间：2026-06-12</p>
+      <div class="tag-row"><span class="tag-chip">退款分析</span><span class="tag-chip">退款归因</span><span class="tag-chip">月度趋势</span><span class="tag-chip">渠道交叉</span></div>
+    </section>
+    
+    
+    <section class="callout callout-info">
+      <div class="block-head">
+        <h2>核心判断</h2>
+        <p></p>
+      </div>
+      <div class="callout-body"><p>近 3 个月总退款金额 4.99 万元，退款率（金额）6.32%。&lt;b&gt;商品质量问题&lt;/b&gt;和&lt;b&gt;尺寸/规格不符&lt;/b&gt;是最大退款原因，合计贡献 40.86% 的退款金额。退款率在 3 月最高（13.15%），6 月因支付量暴增而稀释至 2.34%。支付宝渠道退款金额占比最高（34.32%），但与其订单量占比基本匹配。</p></div>
+    </section>
+    
+    <section class="panel metrics-block">
+      <div class="block-head"><h2>关键指标总览</h2><p></p></div>
+      <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">退款总金额</div>
+              <div class="metric-value">49,921 元</div>
+              <div class="metric-note">2026-03 ~ 2026-06</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">退款总订单数</div>
+              <div class="metric-value">451 笔</div>
+              <div class="metric-note">占全部订单 9.85%</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">支付总金额</div>
+              <div class="metric-value">789,729 元</div>
+              <div class="metric-note">同期支付订单总额</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">退款率(金额)</div>
+              <div class="metric-value">6.32%</div>
+              <div class="metric-note">退款金额 ÷ 支付金额</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">退款率(订单)</div>
+              <div class="metric-value">9.85%</div>
+              <div class="metric-note">退款订单数 ÷ 支付订单数</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">平均每笔退款</div>
+              <div class="metric-value">110.69 元</div>
+              <div class="metric-note">退款金额 ÷ 退款订单数</div>
+            </div>
+            </div>
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>月度趋势分析</h2>
+        <p>退款金额逐月上升（3→5月），6月因支付体量翻倍而退款率明显下降。</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>月度退款金额 &amp; 退款率趋势</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-54a784ae" class="echarts-canvas" style="height:380px;"></div>
+      <script type="application/json" id="echarts-chart-54a784ae-option">{"tooltip": {"trigger": "axis"}, "legend": {"data": ["退款金额(元)", "退款率(%)"]}, "xAxis": {"type": "category", "data": ["2026-03", "2026-04", "2026-05", "2026-06"]}, "yAxis": [{"type": "value", "name": "退款金额(元)"}, {"type": "value", "name": "退款率(%)", "min": 0}], "series": [{"name": "退款金额(元)", "type": "bar", "data": [10805.67, 13592.35, 15882.29, 9640.92], "itemStyle": {"color": "#b5542e"}}, {"name": "退款率(%)", "type": "line", "yAxisIndex": 1, "data": [13.15, 9.22, 10.72, 2.34], "itemStyle": {"color": "#1c6660"}, "lineStyle": {"width": 3}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-54a784ae",
+          optionId: "echarts-chart-54a784ae-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      <div class="block-head"><h2>月度明细</h2><p></p></div>
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>月份</th><th>退款金额(元)</th><th>退款订单数</th><th>支付金额(元)</th><th>退款率(金额)</th></tr></thead>
+        <tbody><tr><td>2026-03</td><td>10,805.67</td><td>102</td><td>82,196.04</td><td>13.15%</td></tr><tr><td>2026-04</td><td>13,592.35</td><td>133</td><td>147,442.51</td><td>9.22%</td></tr><tr><td>2026-05</td><td>15,882.29</td><td>147</td><td>148,217.66</td><td>10.72%</td></tr><tr><td>2026-06</td><td>9,640.92</td><td>69</td><td>411,873.07</td><td>2.34%</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>退款原因归因</h2>
+        <p>TOP 3 退款原因贡献了近 60% 的退款金额，集中在商品质量问题、尺寸/规格不符和用户拒收。</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>退款原因 TOP 5 金额对比</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-top-5-ae8c0166" class="echarts-canvas" style="height:360px;"></div>
+      <script type="application/json" id="echarts-top-5-ae8c0166-option">{"tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}}, "xAxis": {"type": "category", "data": ["商品质量问题", "尺寸/规格不符", "用户拒收", "不想要了", "商品破损"]}, "yAxis": {"type": "value", "name": "退款金额(元)"}, "series": [{"name": "退款金额", "type": "bar", "data": [10543.0, 9854.26, 9485.19, 7271.2, 7243.53], "itemStyle": {"color": {"type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{"offset": 0, "color": "#b5542e"}, {"offset": 1, "color": "#d97706"}]}}, "label": {"show": true, "position": "top", "formatter": "{c} 元"}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-top-5-ae8c0166",
+          optionId: "echarts-top-5-ae8c0166-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>退款原因占比（贡献度）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-95ba3201" class="echarts-canvas" style="height:320px;"></div>
+      <script type="application/json" id="echarts-chart-95ba3201-option">{"tooltip": {"trigger": "item", "formatter": "{b}: {d}%"}, "series": [{"type": "pie", "radius": ["40%", "70%"], "center": ["50%", "50%"], "label": {"show": true, "formatter": "{b}\n{d}%"}, "data": [{"value": 21.12, "name": "商品质量问题", "itemStyle": {"color": "#b5542e"}}, {"value": 19.74, "name": "尺寸/规格不符", "itemStyle": {"color": "#d97706"}}, {"value": 19.0, "name": "用户拒收", "itemStyle": {"color": "#1c6660"}}, {"value": 14.57, "name": "不想要了", "itemStyle": {"color": "#6e5bd6"}}, {"value": 14.51, "name": "商品破损", "itemStyle": {"color": "#e8a87c"}}, {"value": 11.07, "name": "物流时效不满意", "itemStyle": {"color": "#94b0b0"}}]}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-95ba3201",
+          optionId: "echarts-chart-95ba3201-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>支付渠道 × 退款原因交叉分析</h2>
+        <p>支付宝渠道在各退款原因上均有分布，COD和JD在用户拒收上退款金额相对突出。</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>渠道 × 退款原因交叉热力 (万元)</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-220c1e4c" class="echarts-canvas" style="height:360px;"></div>
+      <script type="application/json" id="echarts-chart-220c1e4c-option">{"tooltip": {"trigger": "item"}, "xAxis": {"type": "category", "data": ["不想要了", "商品破损", "商品质量问题", "尺寸/规格不符", "物流时效不满意", "用户拒收"], "axisLabel": {"rotate": 20}}, "yAxis": {"type": "category", "data": ["UNIONPAY", "WECHAT", "JD", "COD", "ALIPAY"]}, "visualMap": {"min": 0, "max": 0.45, "calculable": true, "inRange": {"color": ["#f5e6d3", "#d97706", "#b5542e"]}}, "series": [{"type": "heatmap", "data": [[0, 4, 0.32], [1, 4, 0.23], [2, 4, 0.3], [3, 4, 0.43], [4, 4, 0.24], [5, 4, 0.19], [0, 3, 0.15], [1, 3, 0.16], [2, 3, 0.22], [3, 3, 0.14], [4, 3, 0.08], [5, 3, 0.19], [0, 2, 0.06], [1, 2, 0.07], [2, 2, 0.15], [3, 2, 0.15], [4, 2, 0.12], [5, 2, 0.26], [0, 1, 0.09], [1, 1, 0.14], [2, 1, 0.17], [3, 1, 0.19], [4, 1, 0.06], [5, 1, 0.07], [0, 0, 0.11], [1, 0, 0.12], [2, 0, 0.21], [3, 0, 0.07], [4, 0, 0.05], [5, 0, 0.24]], "label": {"show": true, "color": "#333", "fontSize": 10}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-220c1e4c",
+          optionId: "echarts-chart-220c1e4c-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel chart-block">
+      <div class="block-head"><h2>各渠道退款金额排名</h2><p></p></div>
+      
+            <div class="chart-row">
+              <div class="chart-label">ALIPAY</div>
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="width:0%"></div>
+              </div>
+              <div class="chart-value">17,134.50 元34.32%</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label">COD（货到付款）</div>
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="width:0%"></div>
+              </div>
+              <div class="chart-value">9,393.56 元18.82%</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label">JD（京东支付）</div>
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="width:0%"></div>
+              </div>
+              <div class="chart-value">8,183.65 元16.39%</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label">WECHAT</div>
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="width:0%"></div>
+              </div>
+              <div class="chart-value">8,059.42 元16.14%</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label">UNIONPAY</div>
+              <div class="chart-bar-wrap">
+                <div class="chart-bar" style="width:0%"></div>
+              </div>
+              <div class="chart-value">7,150.09 元14.32%</div>
+            </div>
+            
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>月度 × 退款原因交叉</h2>
+        <p>商品质量问题在 5 月最为突出（0.39 万元），用户拒收在 4 月和 6 月占比明显偏高。</p>
+      </div>
+      
+    <section class="panel table-block">
+      <div class="block-head"><h2>月度 × 退款原因 (单位:万元)</h2><p></p></div>
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>月份</th><th>不想要了</th><th>商品破损</th><th>商品质量问题</th><th>尺寸/规格不符</th><th>物流时效不满意</th><th>用户拒收</th></tr></thead>
+        <tbody><tr><td>2026-03</td><td>0.16</td><td>0.16</td><td>0.31</td><td>0.15</td><td>0.18</td><td>0.12</td></tr><tr><td>2026-04</td><td>0.27</td><td>0.23</td><td>0.22</td><td>0.15</td><td>0.16</td><td>0.33</td></tr><tr><td>2026-05</td><td>0.20</td><td>0.26</td><td>0.39</td><td>0.42</td><td>0.19</td><td>0.12</td></tr><tr><td>2026-06</td><td>0.09</td><td>0.08</td><td>0.12</td><td>0.26</td><td>0.03</td><td>0.39</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>行动建议</h2>
+        <p></p>
+      </div>
+      
+    <section class="panel list-block">
+      
+      <ul class="content-list"><li>【商品质量】商品质量问题占退款 21.12%，建议重点排查近 3 个月投诉集中的 SKU，联合质检/供应商进行改善</li><li>【尺寸/规格】占 19.74%，建议优化商品详情页的尺码表、规格说明，增加「尺码助手」或人工客服推荐功能</li><li>【用户拒收】占 19%（53 笔），建议分析拒收订单的地域分布和配送时长，优先改善物流体验差的区域</li><li>【支付宝渠道】退款占比 34.32%，需确认是否与支付宝用户基数匹配；如果退款率显著高于其他渠道，应排查支付链路问题</li><li>【6 月异常】6 月支付量大增但退款金额下降，需持续监控 6 月下半月退款数据，防止滞后期影响</li></ul>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>附录：口径说明</h2>
+        <p></p>
+      </div>
+      
+    <section class="panel list-block">
+      
+      <ul class="content-list"><li>时间口径：退款成功时间（refund_success_time），2026-03-01 ~ 2026-06-08</li><li>状态过滤：仅统计 refund_status = &#x27;退款成功&#x27;，不含审核中/已拒绝/已关闭</li><li>金额单位：所有金额字段已从「分」转为「元」（* 0.01）</li><li>退款率(金额) = SUM(refund_success_amount) / SUM(paid_amount)，同时间窗口</li><li>退款率(订单) = COUNT(DISTINCT refund_order_id) / COUNT(DISTINCT pay_order_id)</li><li>地域数据：用户省份字段因数据关联缺失为空，暂无法做地域维度分析</li><li>数据来源：dwd_fact_trade_refund_detail_di / dwd_fact_trade_pay_detail_di</li></ul>
+    </section>
+    
+    </section>
+    
+  </main>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>insight-agent · 关联大流程图</title>
+<script src="data.js"></script>
+<style>
+  :root {
+    --bg-0: #F8FAFC; --bg-1: #FFFFFF; --bg-2: #F1F5F9; --bg-3: #E2E8F0;
+    --line: rgba(15, 23, 42, 0.08); --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A; --text-2: #475569; --text-3: #94A3B8; --text-on-accent: #FFFFFF;
+    --accent-cyan: #0891B2; --accent-blue: #2563EB; --accent-purple: #7C3AED;
+    --accent-pink: #DB2777; --accent-green: #16A34A; --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C; --accent-red: #DC2626;
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-0); color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; font-size: 15px; }
+  body { background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px; }
+  header { padding: 22px 40px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); position: relative; }
+  header::after { content: ''; position: absolute; left: 40px; right: 40px; bottom: -1px; height: 2px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink), var(--accent-orange), var(--accent-green), var(--accent-purple)); }
+  h1 { font-size: 28px; font-weight: 700; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 16px; color: var(--text-2); margin-top: 6px; }
+  .meta { position: absolute; right: 40px; top: 28px; font-size: 14px; color: var(--text-3); display: flex; gap: 10px; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; padding: 5px 11px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .meta a:hover { background: var(--accent-cyan); color: var(--text-on-accent); }
+  main { padding: 24px 40px 60px; max-width: 1900px; margin: 0 auto; }
+
+  .flow-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .flow-bar-label { font-size: 15px; color: var(--text-2); font-weight: 600; margin-right: 4px; }
+  .flow-btn { padding: 11px 22px; border-radius: 9px; border: 2px solid var(--line-strong); background: var(--bg-1); color: var(--text-2); font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .flow-btn:hover { border-color: var(--flow-color, var(--accent-cyan)); color: var(--flow-color, var(--accent-cyan)); }
+  .flow-btn.active { background: var(--flow-color, var(--accent-cyan)); color: var(--text-on-accent); border-color: var(--flow-color, var(--accent-cyan)); box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
+
+  .canvas-wrap { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-md); overflow: hidden; margin-bottom: 20px; }
+  .canvas-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+  .canvas-title { font-size: 18px; font-weight: 600; flex: 1; }
+  .canvas-action { padding: 6px 12px; border: 1px solid var(--line-strong); background: var(--bg-1); color: var(--text-2); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+  .canvas-action:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+  .canvas-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text-3); background: rgba(255,255,255,0.92); padding: 4px 12px; border-radius: 12px; pointer-events: none; }
+  .canvas-meta { font-size: 14px; color: var(--text-2); }
+  .canvas-body { padding: 24px; min-height: 600px; overflow: hidden; cursor: grab; }
+  .canvas-body svg { width: 100%; height: 700px; user-select: none; }
+
+  .node-rect { fill: var(--bg-1); stroke: var(--node-color, var(--accent-cyan)); stroke-width: 3; transition: all 0.3s; }
+  .node-rect.scenario-boundary { fill: rgba(8, 145, 178, 0.04); stroke: rgba(8, 145, 178, 0.35); stroke-width: 2; stroke-dasharray: 8,4; }
+  .node-text { fill: var(--text-1); font-size: 17px; font-weight: 700; pointer-events: none; text-anchor: middle; }
+  .node-file { fill: var(--text-3); font-size: 13px; font-family: ui-monospace, "Cascadia Code", monospace; pointer-events: none; text-anchor: middle; }
+  .node-scenario-label { fill: var(--text-1); font-size: 16px; font-weight: 700; pointer-events: none; text-anchor: middle; letter-spacing: 1px; }
+  .edge-path { fill: none; stroke: var(--bg-3); stroke-width: 3; }
+  .edge-path.cross-scenario { stroke: var(--accent-orange); stroke-dasharray: 6,4; stroke-width: 3.5; }
+  .edge-label { fill: var(--text-1); font-size: 14px; font-weight: 600; pointer-events: none; text-anchor: middle; }
+  .edge-label.cross { fill: var(--accent-orange); font-weight: 700; }
+  .edge-label-bg { fill: var(--bg-1); stroke: var(--bg-3); stroke-width: 1; }
+  .edge-label-bg.cross { fill: rgba(234, 88, 12, 0.08); stroke: var(--accent-orange); }
+
+  .legend { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; font-size: 14px; }
+  .legend-title { font-weight: 600; margin-bottom: 8px; color: var(--text-2); }
+  .legend-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+  .legend-dot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔗 insight-agent · 关联大流程图</h1>
+  <div class="subtitle">把多个场景拼成一个完整业务流程 · 跨场景用虚线连接 · 数据与 <a href="interactive-demo.html" style="color:var(--accent-cyan);">interactive-demo.html</a> 共享</div>
+  <div class="meta">
+    <a href="interactive-demo.html">交互演示</a>
+    <a href="flow-scenarios.html">场景流程图</a>
+    <a href="file-matrix.html">总表</a>
+    <a href="overview.html">序章</a>
+    <a href="../../insight.md">主文档</a>
+  </div>
+</header>
+
+<main>
+
+  <div class="flow-bar" id="flowBar">
+    <span class="flow-bar-label">关联流程：</span>
+  </div>
+
+  <div class="canvas-wrap">
+    <div class="canvas-header">
+      <div class="canvas-title" id="canvasTitle">关联流程</div>
+      <div class="canvas-meta" id="canvasMeta"></div>
+      <button class="canvas-action" id="btnResetZoom" title="重置视图">⟲ 重置</button>
+      <button class="canvas-action" id="btnFitZoom" title="适应屏幕">⛶ 适应</button>
+    </div>
+    <div class="canvas-body">
+      <svg id="graph" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="canvas-hint">🖱️ 滚轮缩放 · 拖拽平移</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">🎨 节点颜色 = 文件模块（同 insight-agent 源码树）</div>
+    <div class="legend-grid" id="legendGrid"></div>
+  </div>
+
+</main>
+
+<script>
+// data.js 已将全部数据 + 工具函数挂为全局变量，无需解构
+const _INSIGHT = window.INSIGHT_DATA;
+
+let currentFlow = null;
+let mergedData = null;   // 合并后的节点/边/场景分组
+
+function init() {
+  renderFlowBar();
+  renderLegend();
+  selectFlow('flow-lifecycle');  // 默认选完整生命周期
+
+  // 重置/适应按钮
+  document.getElementById('btnResetZoom').addEventListener('click', () => {
+    selectFlow(currentFlow.id);  // 重新渲染等于重置
+  });
+  document.getElementById('btnFitZoom').addEventListener('click', () => {
+    const svg = document.getElementById('graph');
+    const vb = svg.viewBox.baseVal;
+    const cw = svg.clientWidth, ch = svg.clientHeight;
+    const scale = Math.min(cw / vb.width, ch / vb.height) * 0.95;
+    const w = vb.width / scale, h = vb.height / scale;
+    svg.setAttribute('viewBox', `${vb.x - (w - vb.width)/2} ${vb.y - (h - vb.height)/2} ${w} ${h}`);
+    showZoomHint(svg, w, h);
+  });
+}
+
+function renderFlowBar() {
+  const bar = document.getElementById('flowBar');
+  bar.innerHTML = '<span class="flow-bar-label">关联流程：</span>' + FLOWS.map(f =>
+    `<button class="flow-btn" data-id="${f.id}" style="--flow-color: ${f.color};">${f.name}</button>`
+  ).join('');
+  bar.querySelectorAll('.flow-btn').forEach(b => b.addEventListener('click', () => selectFlow(b.dataset.id)));
+}
+
+function renderLegend() {
+  document.getElementById('legendGrid').innerHTML = Object.entries(MODULES).map(([k, m]) =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${m.color};"></span>${m.name}</div>`
+  ).join('');
+}
+
+function selectFlow(flowId) {
+  currentFlow = FLOWS.find(f => f.id === flowId);
+  document.querySelectorAll('.flow-btn').forEach(b => b.classList.toggle('active', b.dataset.id === flowId));
+  document.getElementById('canvasTitle').textContent = currentFlow.name;
+  const totalNodes = currentFlow.scenarioIds.reduce((acc, id) => acc + getScenario(id).nodes.length, 0);
+  const totalEdges = currentFlow.scenarioIds.reduce((acc, id) => acc + getScenario(id).edges.length, 0);
+  document.getElementById('canvasMeta').textContent = `包含 ${currentFlow.scenarioIds.length} 个场景 · ${totalNodes} 个节点 · ${totalEdges} 条边`;
+  mergedData = mergeScenarios(currentFlow.scenarioIds);
+  renderGraph();
+}
+
+function mergeScenarios(scenarioIds) {
+  const allNodes = [];
+  const allEdges = [];
+  const seenNodes = new Map();
+  const scenarioGroups = [];
+
+  // 1) 把所有节点加入（按场景）
+  scenarioIds.forEach((sid) => {
+    const s = getScenario(sid);
+    const groupNodes = [];
+    s.nodes.forEach(n => {
+      if (!seenNodes.has(n.id)) {
+        const newNode = { ...n, scenarioId: sid, scenarioColor: s.color };
+        allNodes.push(newNode);
+        seenNodes.set(n.id, newNode);
+      }
+      groupNodes.push(n.id);
+    });
+    scenarioGroups.push({
+      id: sid,
+      name: s.name.replace(/^[A-Z] · /, ''),
+      color: s.color,
+      nodeIds: groupNodes,
+    });
+  });
+
+  // 2) 加入场景内部边
+  scenarioIds.forEach((sid) => {
+    const s = getScenario(sid);
+    s.edges.forEach(e => {
+      if (seenNodes.has(e.from) && seenNodes.has(e.to)) {
+        allEdges.push({ ...e, scenarioId: sid, crossScenario: false });
+      }
+    });
+  });
+
+  // 3) 加入跨场景边
+  for (let i = 0; i < scenarioIds.length - 1; i++) {
+    const fromSid = scenarioIds[i];
+    const toSid = scenarioIds[i + 1];
+    const links = window.getCrossLinks(fromSid, toSid) || [];
+    links.forEach(link => {
+      if (seenNodes.has(link.from) && seenNodes.has(link.to)) {
+        allEdges.push({
+          from: link.from, to: link.to,
+          label: link.label || '→',
+          scenarioId: fromSid,
+          crossScenario: true,
+        });
+      }
+    });
+  }
+
+  return { nodes: allNodes, edges: allEdges, groups: scenarioGroups };
+}
+
+const NODE_W = 200;
+const NODE_H = 80;
+const COL_GAP = 80;     // 场景间水平间距
+const LAYER_GAP = 60;   // 场景内层级间距
+const ROW_GAP = 50;     // 场景内行间距
+const SCENARIO_PADDING = 80;  // 场景框左右内边距
+
+function layoutMerged(merged) {
+  const positions = {};
+  // 先预估每个场景需要的宽度（按其内部最大层级数）
+  const scenarioLayerCounts = merged.groups.map(g => {
+    const scenario = getScenario(g.id);
+    const layers = {};
+    const visited = new Set();
+    const roots = g.nodeIds.filter(id => !scenario.edges.some(e => e.to === id));
+    roots.forEach(r => { layers[r] = 0; visited.add(r); });
+    let changed = true, iter = 0;
+    while (changed && iter < 100) {
+      changed = false; iter++;
+      scenario.edges.forEach(e => {
+        if (visited.has(e.from) && g.nodeIds.includes(e.to) && !visited.has(e.to)) {
+          layers[e.to] = layers[e.from] + 1;
+          visited.add(e.to);
+          changed = true;
+        }
+      });
+    }
+    g.nodeIds.forEach(id => { if (!visited.has(id)) { layers[id] = (Object.values(layers).reduce((a,b)=>Math.max(a,b),-1))+1; visited.add(id); } });
+    const unique = new Set(Object.values(layers));
+    return unique.size;
+  });
+
+  // 计算每个场景的起始 X
+  const SCENARIO_GAP = 100;  // 场景间大间隔
+  let curX = SCENARIO_PADDING;
+  const scenarioStartX = [];
+  for (let i = 0; i < merged.groups.length; i++) {
+    scenarioStartX.push(curX);
+    const w = scenarioLayerCounts[i] * (NODE_W + LAYER_GAP) + SCENARIO_PADDING;
+    curX += w + SCENARIO_GAP;
+  }
+
+  merged.groups.forEach((g, gi) => {
+    const scenario = getScenario(g.id);
+    const layers = {};
+    const visited = new Set();
+    const roots = g.nodeIds.filter(id => !scenario.edges.some(e => e.to === id));
+    roots.forEach(r => { layers[r] = 0; visited.add(r); });
+    let changed = true, iter = 0;
+    while (changed && iter < 100) {
+      changed = false; iter++;
+      scenario.edges.forEach(e => {
+        if (visited.has(e.from) && g.nodeIds.includes(e.to) && !visited.has(e.to)) {
+          layers[e.to] = layers[e.from] + 1;
+          visited.add(e.to);
+          changed = true;
+        }
+      });
+    }
+    g.nodeIds.forEach(id => { if (!visited.has(id)) { layers[id] = (Object.values(layers).reduce((a,b)=>Math.max(a,b),-1))+1; visited.add(id); } });
+    const layerGroups = {};
+    g.nodeIds.forEach(id => { (layerGroups[layers[id]] = layerGroups[layers[id]] || []).push(id); });
+    const layerKeys = Object.keys(layerGroups).map(Number).sort((a,b) => a-b);
+
+    const startX = scenarioStartX[gi];
+    layerKeys.forEach((lk, li) => {
+      const arr = layerGroups[lk];
+      const colX = startX + li * (NODE_W + LAYER_GAP) + NODE_W / 2;
+      arr.forEach((id, ni) => {
+        positions[id] = { x: colX, y: 120 + ni * (NODE_H + ROW_GAP) };
+      });
+    });
+  });
+
+  return positions;
+}
+
+/* =============== Pan & Zoom =============== */
+function initPanZoom(svg) {
+  if (svg._panZoomInited) return;
+  svg._panZoomInited = true;
+  svg.style.cursor = 'grab';
+
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const vb = svg.viewBox.baseVal;
+    const scale = e.deltaY > 0 ? 1.15 : 0.87;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const newW = vb.width * scale;
+    const newH = vb.height * scale;
+    const newX = cursor.x - (cursor.x - vb.x) * scale;
+    const newY = cursor.y - (cursor.y - vb.y) * scale;
+    svg.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
+    showZoomHint(svg, newW, newH);
+  }, { passive: false });
+
+  let isPanning = false, startX, startY, vbX, vbY, vbW, vbH;
+  svg.addEventListener('mousedown', (e) => {
+    isPanning = true;
+    const vb = svg.viewBox.baseVal;
+    startX = e.clientX; startY = e.clientY;
+    vbX = vb.x; vbY = vb.y; vbW = vb.width; vbH = vb.height;
+    svg.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    const dx = (e.clientX - startX) * (vbW / svg.clientWidth);
+    const dy = (e.clientY - startY) * (vbH / svg.clientHeight);
+    svg.setAttribute('viewBox', `${vbX - dx} ${vbY - dy} ${vbW} ${vbH}`);
+  });
+  window.addEventListener('mouseup', () => {
+    if (isPanning) { isPanning = false; svg.style.cursor = 'grab'; }
+  });
+}
+
+function showZoomHint(svg, w, h) {
+  let hint = document.getElementById('zoomHint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'zoomHint';
+    hint.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(15,23,42,0.85);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;pointer-events:none;z-index:10;transition:opacity 0.3s;';
+    svg.parentElement.style.position = 'relative';
+    svg.parentElement.appendChild(hint);
+  }
+  hint.textContent = `${Math.round(w)} × ${Math.round(h)}`;
+  hint.style.opacity = '1';
+  clearTimeout(hint._t);
+  hint._t = setTimeout(() => hint.style.opacity = '0.3', 800);
+}
+
+function renderGraph() {
+  const svg = document.getElementById('graph');
+  const positions = layoutMerged(mergedData);
+
+  // 1) 场景分组背景（虚线框）
+  let bgRects = '';
+  mergedData.groups.forEach((g, gi) => {
+    if (!g.nodeIds.length) return;
+    const xs = g.nodeIds.map(id => positions[id]?.x).filter(x => x !== undefined);
+    const ys = g.nodeIds.map(id => positions[id]?.y).filter(y => y !== undefined);
+    if (!xs.length) return;
+    const minX = Math.min(...xs) - 110, maxX = Math.max(...xs) + 110;
+    const minY = Math.min(...ys) - 70, maxY = Math.max(...ys) + 70;
+    const w = maxX - minX, h = maxY - minY;
+    bgRects += `<rect class="node-rect scenario-boundary" x="${minX}" y="${minY}" width="${w}" height="${h}" style="--node-color: ${g.color}; stroke: ${g.color};"/>`;
+    bgRects += `<text class="node-scenario-label" x="${minX + w/2}" y="${minY - 18}" style="fill: ${g.color};">▎场景 ${g.id} · ${g.name}▕</text>`;
+  });
+
+  // 2) 边
+  let edges = '';
+  mergedData.edges.forEach(e => {
+    const from = positions[e.from];
+    const to = positions[e.to];
+    if (!from || !to) return;
+    // 从节点边缘出发
+    const fromGroup = mergedData.groups.findIndex(g => g.nodeIds.includes(e.from));
+    const toGroup = mergedData.groups.findIndex(g => g.nodeIds.includes(e.to));
+    const isCross = fromGroup !== toGroup;
+    const x1 = from.x + (to.x > from.x ? NODE_W / 2 : -NODE_W / 2);
+    const y1 = from.y;
+    const x2 = to.x + (to.x > from.x ? -NODE_W / 2 : NODE_W / 2);
+    const y2 = to.y;
+    const dx = (x2 - x1) * 0.45;
+    const path = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    edges += `<path class="edge-path ${isCross ? 'cross-scenario' : ''}" d="${path}" marker-end="url(#arrow-${isCross ? 'cross' : 'normal'})"/>`;
+    if (e.label) {
+      const lx = (x1 + x2) / 2;
+      const ly = (y1 + y2) / 2 - 10;
+      const textLen = e.label.length * 7;
+      edges += `<rect class="edge-label-bg ${isCross ? 'cross' : ''}" x="${lx - textLen/2 - 6}" y="${ly - 14}" width="${textLen + 12}" height="22" rx="4"/>`;
+      edges += `<text class="edge-label ${isCross ? 'cross' : ''}" x="${lx}" y="${ly}">${e.label}</text>`;
+    }
+  });
+
+  // 箭头定义
+  const defs = `<defs>
+    <marker id="arrow-normal" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,7 L9,3.5 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrow-cross" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,7 L9,3.5 z" fill="#EA580C"/>
+    </marker>
+  </defs>`;
+
+  // 3) 节点
+  let nodes = '';
+  mergedData.nodes.forEach(n => {
+    const p = positions[n.id];
+    if (!p) return;
+    const modColor = getModuleColor(n.module);
+    const label = n.label.length > 14 ? n.label.slice(0, 13) + '…' : n.label;
+    const file = n.file.length > 26 ? n.file.slice(0, 25) + '…' : n.file;
+    nodes += `
+      <g class="node-group" data-node="${n.id}">
+        <rect class="node-rect" x="${p.x - NODE_W/2}" y="${p.y - NODE_H/2}" width="${NODE_W}" height="${NODE_H}" style="--node-color: ${modColor};" rx="12"/>
+        <text class="node-text" x="${p.x}" y="${p.y - 10}">${label}</text>
+        <text class="node-file" x="${p.x}" y="${p.y + 14}">${file}</text>
+      </g>
+    `;
+  });
+
+  svg.innerHTML = defs + bgRects + edges + nodes;
+
+  // 自适应 viewBox
+  const xs = Object.values(positions).map(p => p.x);
+  const ys = Object.values(positions).map(p => p.y);
+  const minX = Math.min(...xs) - 160;
+  const maxX = Math.max(...xs) + 160;
+  const minY = Math.min(...ys) - 100;
+  const maxY = Math.max(...ys) + 100;
+  svg.setAttribute('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+
+  initPanZoom(svg);
+}
+
+init();
+</script>
+
+</body>
+</html>

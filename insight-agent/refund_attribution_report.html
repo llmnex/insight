@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>退款归因分析报告</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      if (!window.echarts || !window.__insightEchartsQueue) {
+        return;
+      }
+      window.__insightEchartsQueue.forEach(function (item) {
+        const el = document.getElementById(item.id);
+        const optionEl = document.getElementById(item.optionId);
+        if (!el || !optionEl) {
+          return;
+        }
+        const option = JSON.parse(optionEl.textContent || "{}");
+        const chart = window.echarts.init(el);
+        chart.setOption(option);
+        window.addEventListener("resize", function () {
+          chart.resize();
+        });
+      });
+    });
+  </script>
+    
+  <style>
+    :root {
+      --bg: #f6efe6;
+      --paper: rgba(255, 252, 247, 0.95);
+      --paper-strong: #fffdf9;
+      --ink: #221d18;
+      --muted: #6f655a;
+      --line: #dfd3c6;
+      --brand: #b5542e;
+      --brand-soft: #f4dccf;
+      --accent: #1c6660;
+      --accent-soft: #dbeceb;
+      --warn: #9a4d26;
+      --warn-soft: #f6dfd0;
+      --shadow: 0 20px 50px rgba(84, 58, 34, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      line-height: 1.6;
+      background:
+        radial-gradient(circle at top left, rgba(181, 84, 46, 0.14), transparent 25%),
+        radial-gradient(circle at top right, rgba(28, 102, 96, 0.14), transparent 22%),
+        linear-gradient(180deg, #f7f1e9 0%, #f3ece3 100%);
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    .hero, .panel, .callout {
+      background: var(--paper);
+      border: 1px solid rgba(223, 211, 198, 0.92);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero {
+      padding: 32px;
+      background: linear-gradient(135deg, rgba(255,253,249,0.98), rgba(247,238,229,0.98));
+    }
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+    }
+    .subtitle, .meta-line {
+      margin: 0;
+      color: var(--muted);
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .tag-chip {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(28, 102, 96, 0.08);
+      color: var(--accent);
+      font-size: 12px;
+    }
+    .panel, .callout {
+      margin-top: 24px;
+      padding: 24px;
+    }
+    .block-head {
+      margin-bottom: 18px;
+    }
+    .block-head h2 {
+      margin: 0 0 8px;
+      font-size: 26px;
+    }
+    .block-head p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .prose-block p, .callout-body p {
+      margin: 10px 0 0;
+    }
+    .content-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .content-list li {
+      margin: 8px 0;
+    }
+    .metrics-grid, .info-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .metric-card, .info-card, .column-card {
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .metric-label, .info-card-label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .metric-value, .info-card-value {
+      margin-top: 8px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .metric-note, .info-card-body {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .table-scroll {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--paper-strong);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    th {
+      color: var(--muted);
+      background: #fbf5ef;
+      font-weight: 600;
+    }
+    .chart-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 110px;
+      gap: 12px;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .chart-label, .chart-value {
+      font-size: 14px;
+    }
+    .chart-bar-wrap {
+      height: 12px;
+      border-radius: 999px;
+      background: #eee1d5;
+      overflow: hidden;
+    }
+    .chart-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--brand), #e09755);
+    }
+    .chart-empty {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .echarts-canvas {
+      width: 100%;
+      min-height: 240px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7f1 100%);
+      border: 1px solid var(--line);
+      padding: 8px;
+    }
+    .line-chart-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .line-chart-svg {
+      width: 100%;
+      height: auto;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7f1 100%);
+      border: 1px solid var(--line);
+      padding: 8px;
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .chart-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .chart-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .line-point-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .line-point-card {
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .line-point-series {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .line-point-label {
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .line-point-value {
+      margin-top: 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .callout-info {
+      border-left: 6px solid var(--accent);
+      background: linear-gradient(135deg, rgba(219,236,235,0.76), rgba(255,252,247,0.98));
+    }
+    .callout-warn {
+      border-left: 6px solid var(--warn);
+      background: linear-gradient(135deg, rgba(246,223,208,0.88), rgba(255,252,247,0.98));
+    }
+    .callout-success {
+      border-left: 6px solid #3b7f52;
+      background: linear-gradient(135deg, rgba(221,238,225,0.88), rgba(255,252,247,0.98));
+    }
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .column-title {
+      margin-bottom: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--brand);
+    }
+    .column-card .panel, .column-card .callout {
+      margin-top: 16px;
+      box-shadow: none;
+    }
+    @media (max-width: 720px) {
+      .hero, .panel, .callout {
+        padding: 20px;
+        border-radius: 18px;
+      }
+      .chart-row {
+        grid-template-columns: 1fr;
+      }
+      th, td {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    
+    <section class="hero">
+      <div class="eyebrow">Refund Attribution Report</div>
+      <h1>退款归因分析报告</h1>
+      <p class="subtitle">2026-06-01 ~ 2026-09-01（最近 3 个完整自然月）· 退款成功口径</p>
+      <p class="meta-line">生成时间：2026-09-22</p>
+      <div class="tag-row"><span class="tag-chip">退款归因</span><span class="tag-chip">原因分析</span><span class="tag-chip">渠道</span><span class="tag-chip">地域</span><span class="tag-chip">大促长尾</span></div>
+    </section>
+    
+    
+    <section class="callout callout-warn">
+      <div class="block-head">
+        <h2>核心判断</h2>
+        <p>退款金额不是均匀撒在 3 个月里，而是由 6 月大促订单在 7 月集中退货造成</p>
+      </div>
+      <div class="callout-body"><p>2026-06-01 ~ 2026-09-01 退款成功金额合计 12.55 万元（1,083 笔明细，涉及 689 个订单），同期支付金额 102.76 万元，整体退款率 12.21%。</p><p>按退款发生月看，7 月退款率高达 27.41%，是 6 月（8.85%）的 3.1 倍，看起来像 7 月出了大问题；但拆到「原始下单月」后，7 月退回的 39,074 元里有 32,383 元（82.9%）来自 6 月订单。所以 7 月的高退款率是口径错配（分子是 6 月订单、分母是萎缩的 7 月支付额），不是 7 月经营恶化。</p><p>按同一批订单对齐后，6 月订单口径退款率 11.79%、7 月订单口径 11.79%，二者基本持平，说明大促并没有让商品质量或履约能力变差，只是把退款时间往后推了。</p></div>
+    </section>
+    
+    <section class="panel metrics-block">
+      <div class="block-head"><h2>关键指标</h2><p>时间口径 2026-06-01 ~ 2026-09-01（最近 3 个完整自然月），退款成功口径</p></div>
+      <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">退款金额</div>
+              <div class="metric-value">12.55 万元</div>
+              <div class="metric-note">125,485 元</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">整体退款率</div>
+              <div class="metric-value">12.21%</div>
+              <div class="metric-note">退款额 / 同期支付额</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">退款明细笔数</div>
+              <div class="metric-value">1,083 笔</div>
+              <div class="metric-note">涉及 689 个订单</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">笔均退款</div>
+              <div class="metric-value">115.87 元</div>
+              <div class="metric-note">单笔退款均值</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">最高退款原因</div>
+              <div class="metric-value">用户拒收</div>
+              <div class="metric-note">25,227 元，占 20.1%</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">最高退款率渠道</div>
+              <div class="metric-value">COD 货到付款</div>
+              <div class="metric-note">16.96%，是 JD 的 1.9 倍</div>
+            </div>
+            </div>
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>核心摘要</h2>
+        <p>5 条结论，按重要性排序</p>
+      </div>
+      
+    <section class="panel list-block">
+      
+      <ol class="content-list"><li>退款规模 12.55 万元，整体退款率 12.21%（1,083 笔 / 689 单 / 同期支付 102.76 万元）。</li><li>7 月退款率 27.41% 是「假信号」：82.9% 的 7 月退款来自 6 月订单，属于 618 大促的退款长尾，不是 7 月自身恶化。</li><li>退款原因高度分散：6 个原因金额在 18,346 ~ 25,227 元之间（占比 14.6% ~ 20.1%），没有任何一个原因占主导，意味着退款是「多因并发」的系统性问题，而不是单点质量事故。</li><li>渠道差异是本次最有行动价值的维度：COD 退款率 16.96% 最高、JD 8.98% 最低，相差 1.9 倍；其中「用户拒收 × COD」单格 8,602 元，是原因×渠道交叉里的最大格。</li><li>地域样本只覆盖 3 个省市，河北省占退款额 80.5%（10.10 万元），退款率 12.60%，略高于北京市 9.83%，但样本代表性有限，不适合作为地域策略依据。</li></ol>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>退款金额与月度趋势</h2>
+        <p>退款发生月口径：6 月占 51.2%，7 月退款率跳升至 27.41%</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>月度退款金额 vs 同期支付金额 vs 退款率</h2><p>柱=金额（元，左轴），线=退款率（右轴，%）</p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-vs-vs-3b2693d9" class="echarts-canvas" style="height:380px;"></div>
+      <script type="application/json" id="echarts-vs-vs-3b2693d9-option">{"tooltip": {"trigger": "axis"}, "legend": {"data": ["退款金额", "同期支付金额", "退款率"]}, "grid": {"left": 70, "right": 60, "top": 50, "bottom": 40}, "xAxis": {"type": "category", "data": ["2026-06", "2026-07", "2026-08"]}, "yAxis": [{"type": "value", "name": "金额（元）"}, {"type": "value", "name": "退款率（%）", "max": 35, "axisLabel": {"formatter": "{value}%"}}], "series": [{"name": "退款金额", "type": "bar", "data": [64210.57, 39074.31, 22200.28], "itemStyle": {"color": "#b5542e"}}, {"name": "同期支付金额", "type": "bar", "data": [725182.21, 142530.49, 159887.27], "itemStyle": {"color": "#dfd3c6"}}, {"name": "退款率", "type": "line", "yAxisIndex": 1, "data": [8.85, 27.41, 13.88], "itemStyle": {"color": "#1c6660"}, "lineStyle": {"width": 3}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-vs-vs-3b2693d9",
+          optionId: "echarts-vs-vs-3b2693d9-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>月份</th><th>退款金额（元）</th><th>退款笔数</th><th>同期支付金额（元）</th><th>退款率</th><th>占退款总额</th></tr></thead>
+        <tbody><tr><td>2026-06</td><td>64,211</td><td>553</td><td>725,182</td><td>8.85%</td><td>51.17%</td></tr><tr><td>2026-07</td><td>39,074</td><td>366</td><td>142,530</td><td>27.41%</td><td>31.14%</td></tr><tr><td>2026-08</td><td>22,200</td><td>164</td><td>159,887</td><td>13.88%</td><td>17.69%</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>6 月退款 64,211 元（占 3 个月退款总额的 51.2%），因为 6 月是全年支付峰值月（72.52 万元、4,112 单），退款绝对额自然最大；但 6 月的退款率只有 8.85%，是三个月里最低的。</p><p>7 月支付额骤降至 14.25 万元（仅为 6 月的 19.7%），退款额却还有 39,074 元，退款率被推高到 27.41%。这是典型的「分子分母错月」：7 月退的钱大部分对应 6 月买的货。</p><p>8 月退款率回落到 13.88%，支付额恢复到 15.99 万元，接近常态水位（7/8 月单月支付额约 14~16 万元）。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>退款原因拆解</h2>
+        <p>6 个原因分布异常均匀，用户拒收金额最高且是唯一「整单级」原因</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>退款原因金额排名（元）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-8fc85af5" class="echarts-canvas" style="height:360px;"></div>
+      <script type="application/json" id="echarts-chart-8fc85af5-option">{"tooltip": {"trigger": "axis"}, "grid": {"left": 130, "right": 70, "top": 30, "bottom": 40}, "xAxis": {"type": "value", "name": "退款金额（元）"}, "yAxis": {"type": "category", "data": ["商品质量问题", "尺寸/规格不符", "物流时效不满意", "不想要了", "商品破损", "用户拒收"]}, "series": [{"type": "bar", "data": [18345.6, 19617.79, 20560.33, 20676.7, 21058.03, 25226.71], "itemStyle": {"color": "#b5542e"}, "label": {"show": true, "position": "right", "formatter": "{c}"}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-8fc85af5",
+          optionId: "echarts-chart-8fc85af5-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>退款原因</th><th>退款金额（元）</th><th>金额占比</th><th>退款笔数</th><th>涉及订单</th><th>件单比</th><th>笔均退款（元）</th></tr></thead>
+        <tbody><tr><td>用户拒收</td><td>25,227</td><td>20.10%</td><td>214</td><td>133</td><td>1.61</td><td>117.88</td></tr><tr><td>商品破损</td><td>21,058</td><td>16.78%</td><td>186</td><td>186</td><td>1.00</td><td>113.22</td></tr><tr><td>不想要了</td><td>20,677</td><td>16.48%</td><td>178</td><td>178</td><td>1.00</td><td>116.16</td></tr><tr><td>物流时效不满意</td><td>20,560</td><td>16.38%</td><td>175</td><td>175</td><td>1.00</td><td>117.49</td></tr><tr><td>尺寸/规格不符</td><td>19,618</td><td>15.63%</td><td>160</td><td>160</td><td>1.00</td><td>122.61</td></tr><tr><td>商品质量问题</td><td>18,346</td><td>14.62%</td><td>170</td><td>170</td><td>1.00</td><td>107.92</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>六个原因的退款金额极度均衡：最高「用户拒收」25,227 元，最低「商品质量问题」18,346 元，极差只有 6,881 元，占比区间 14.6% ~ 20.1%。这种「扁平分布」本身就是一个结论——退款不是某个单点问题（比如一批货质量崩了）造成的，而是选品、履约、描述准确性、售后流程多环节同时存在摩擦。</p><p>「用户拒收」是六个原因里唯一的整单级行为：214 笔明细只对应 133 个订单，件单比 1.61，其余五个原因件单比都是 1.00。也就是说拒收会把整个订单的所有商品一起退掉，单次损失更大，而其他原因多是单件退换。</p><p>「物流时效不满意」和「商品破损」合计 41,618 元（33.2%），这两项属于履约可控环节，是最快能改善的部分。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>渠道拆解</h2>
+        <p>退款率从 COD 16.96% 到 JD 8.98%，相差 1.9 倍；金额最大的是 ALIPAY 但因其盘子最大</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>各支付渠道退款金额（元）与退款率（%）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-b9ebf9cd" class="echarts-canvas" style="height:380px;"></div>
+      <script type="application/json" id="echarts-chart-b9ebf9cd-option">{"tooltip": {"trigger": "axis"}, "legend": {"data": ["退款金额", "退款率"]}, "grid": {"left": 70, "right": 60, "top": 50, "bottom": 40}, "xAxis": {"type": "category", "data": ["COD", "WECHAT", "UNIONPAY", "ALIPAY", "JD"]}, "yAxis": [{"type": "value", "name": "退款金额（元）"}, {"type": "value", "name": "退款率（%）", "max": 20, "axisLabel": {"formatter": "{value}%"}}], "series": [{"name": "退款金额", "type": "bar", "data": [29238.41, 26985.87, 22177.25, 31421.42, 15662.21], "itemStyle": {"color": "#b5542e"}}, {"name": "退款率", "type": "line", "yAxisIndex": 1, "data": [16.96, 14.91, 12.42, 9.78, 8.98], "itemStyle": {"color": "#1c6660"}, "lineStyle": {"width": 3}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-b9ebf9cd",
+          optionId: "echarts-chart-b9ebf9cd-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>支付渠道</th><th>支付金额（元）</th><th>退款金额（元）</th><th>退款率</th><th>退款笔数</th><th>占退款总额</th></tr></thead>
+        <tbody><tr><td>COD</td><td>172,356</td><td>29,238</td><td>16.96%</td><td>195</td><td>23.30%</td></tr><tr><td>WECHAT</td><td>180,935</td><td>26,986</td><td>14.91%</td><td>205</td><td>21.51%</td></tr><tr><td>UNIONPAY</td><td>178,531</td><td>22,177</td><td>12.42%</td><td>188</td><td>17.67%</td></tr><tr><td>ALIPAY</td><td>321,370</td><td>31,421</td><td>9.78%</td><td>316</td><td>25.04%</td></tr><tr><td>JD</td><td>174,408</td><td>15,662</td><td>8.98%</td><td>179</td><td>12.48%</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>COD（货到付款）退款率 16.96% 是全场最高，退款额 29,238 元却只用了 968 单——它的单均退款风险最高（30.21 元/单），因为货到付款允许客户开箱后直接拒收，退货门槛为零。</p><p>JD（京东支付）退款率仅 8.98%，是 COD 的 53%。ALIPAY 退款额最高（31,421 元）是因为它的支付盘子最大（32.14 万元、1,879 单），按率算只有 9.78%，属于健康区间。</p><p>注意区分「金额贡献」和「风险效率」：如果只看退款金额，结论会变成「ALIPAY 最该管」，但按退款率排序，真正该管的是 COD 和 WECHAT（14.92%）。这是本报告最重要的口径分歧点。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>退款原因 × 渠道交叉</h2>
+        <p>最大单格「用户拒收 × COD」8,602 元，COD 的拒收问题被单独放大</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>退款原因 × 支付渠道 金额热力图（元）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-f14879fb" class="echarts-canvas" style="height:400px;"></div>
+      <script type="application/json" id="echarts-chart-f14879fb-option">{"tooltip": {"position": "top"}, "grid": {"left": 130, "right": 40, "top": 30, "bottom": 90}, "xAxis": {"type": "category", "data": ["ALIPAY", "COD", "JD", "UNIONPAY", "WECHAT"]}, "yAxis": {"type": "category", "data": ["用户拒收", "商品破损", "不想要了", "物流时效不满意", "尺寸/规格不符", "商品质量问题"]}, "visualMap": {"min": 0, "max": 9000, "calculable": true, "orient": "horizontal", "left": "center", "bottom": 10, "inRange": {"color": ["#f6efe6", "#e5b79c", "#b5542e"]}}, "series": [{"type": "heatmap", "data": [[0, 0, 5333.18], [1, 0, 8601.84], [2, 0, 4092.29], [3, 0, 2888.95], [4, 0, 4310.45], [0, 1, 5848.64], [1, 1, 2632.89], [2, 1, 4579.91], [3, 1, 4070.57], [4, 1, 3926.02], [0, 2, 5474.02], [1, 2, 4664.09], [2, 2, 1593.98], [3, 2, 4136.57], [4, 2, 4808.04], [0, 3, 4221.69], [1, 3, 3294.46], [2, 3, 2263.62], [3, 3, 5023.25], [4, 3, 5757.31], [0, 4, 4343.59], [1, 4, 6231.67], [2, 4, 1287.5], [3, 4, 4337.78], [4, 4, 3417.25], [0, 5, 6200.3], [1, 5, 3813.46], [2, 5, 1844.91], [3, 5, 1720.13], [4, 5, 4766.8]], "label": {"show": true, "formatter": "{c}"}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-f14879fb",
+          optionId: "echarts-chart-f14879fb-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>「用户拒收 × COD」= 8,602 元，是全部 30 个交叉格中的最大值，也是唯一超过 8,000 元的格子。其余各格都在 1,288 ~ 6,232 元之间，分布相当平。</p><p>这说明渠道问题不是全渠道普发：COD 的退款率之所以最高，几乎完全由「拒收」这一种原因贡献。COD 渠道的 29,238 元退款里，29.4% 是拒收；相比之下 JD 渠道的拒收只有 4,092 元。</p><p>反过来说，非 COD 渠道的退款更多来自「商品破损」「商品质量问题」「物流时效不满意」等履约与商品侧原因，两类问题的解法完全不同：COD 靠下单前的确认和风控，其他渠道靠包装、质检和物流。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>地域拆解</h2>
+        <p>样本仅覆盖 3 个省市，河北省占退款额 80.5%，退款率 12.60% 略高于北京</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>各省市退款金额（元）与退款率（%）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-806d8a3e" class="echarts-canvas" style="height:360px;"></div>
+      <script type="application/json" id="echarts-chart-806d8a3e-option">{"tooltip": {"trigger": "axis"}, "legend": {"data": ["退款金额", "退款率"]}, "grid": {"left": 70, "right": 60, "top": 50, "bottom": 40}, "xAxis": {"type": "category", "data": ["河北省", "北京市", "天津市"]}, "yAxis": [{"type": "value", "name": "退款金额（元）"}, {"type": "value", "name": "退款率（%）", "max": 20, "axisLabel": {"formatter": "{value}%"}}], "series": [{"name": "退款金额", "type": "bar", "data": [100994.88, 12314.15, 12176.13], "itemStyle": {"color": "#b5542e"}}, {"name": "退款率", "type": "line", "yAxisIndex": 1, "data": [12.6, 9.83, 12.08], "itemStyle": {"color": "#1c6660"}, "lineStyle": {"width": 3}}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-806d8a3e",
+          optionId: "echarts-chart-806d8a3e-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>省市</th><th>支付金额（元）</th><th>退款金额（元）</th><th>退款率</th><th>退款笔数</th><th>占退款总额</th></tr></thead>
+        <tbody><tr><td>河北省</td><td>801,454</td><td>100,995</td><td>12.60%</td><td>861</td><td>80.48%</td></tr><tr><td>北京市</td><td>125,319</td><td>12,314</td><td>9.83%</td><td>114</td><td>9.81%</td></tr><tr><td>天津市</td><td>100,828</td><td>12,176</td><td>12.08%</td><td>108</td><td>9.70%</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>河北省是绝对主力：退款额 100,995 元占 80.5%，支付额 80.15 万元也占 78.0%，订单 4,478 单。北京、天津两地退款额合计不到 2.5 万元，量级相差一个数量级。</p><p>从退款率看三地差距不大：河北省 12.60% &gt; 天津市 12.08% &gt; 北京市 9.83%，极差 2.8 个百分点。河北省支付额占比（78.0%）高于退款额占比（80.5%），说明它确实略偏高，但幅度有限。</p><p>⚠️ 数据局限：本次数据只覆盖 3 个省市（北京、天津、河北），且河北省一家独大，无法支撑「地域 Top10」「区域策略」类结论。若要看地域规律，需要先补充更多省份的数据。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>大促退款长尾（时间错配归因）</h2>
+        <p>7 月退款额中 82.9% 来自 6 月订单；订单口径退款率 6/7 月均为 11.8%</p>
+      </div>
+      
+    <section class="panel chart-block echarts-block">
+      <div class="block-head"><h2>退款发生月 × 原始下单月 金额堆积（元）</h2><p></p></div>
+      
+    <div class="echarts-wrap">
+      <div id="echarts-chart-74a2ac93" class="echarts-canvas" style="height:400px;"></div>
+      <script type="application/json" id="echarts-chart-74a2ac93-option">{"tooltip": {"trigger": "axis"}, "legend": {"data": ["2026-05", "2026-06", "2026-07", "2026-08"]}, "grid": {"left": 80, "right": 40, "top": 50, "bottom": 40}, "xAxis": {"type": "category", "data": ["2026-06", "2026-07", "2026-08"]}, "yAxis": {"type": "value", "name": "退款金额（元）"}, "series": [{"name": "2026-05", "type": "bar", "stack": "total", "data": [11088.83, 0.0, 0.0]}, {"name": "2026-06", "type": "bar", "stack": "total", "data": [53121.67, 32383.0, 0.0]}, {"name": "2026-07", "type": "bar", "stack": "total", "data": [0.0, 6691.32, 10114.45]}, {"name": "2026-08", "type": "bar", "stack": "total", "data": [0.0, 0.0, 12085.82]}]}</script>
+      <script>
+        window.__insightEchartsQueue = window.__insightEchartsQueue || [];
+        window.__insightEchartsQueue.push({
+          id: "echarts-chart-74a2ac93",
+          optionId: "echarts-chart-74a2ac93-option"
+        });
+      </script>
+    </div>
+    
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>原始下单月</th><th>该月支付金额（元）</th><th>窗口内该月订单产生的退款（元）</th><th>订单口径退款率</th><th>说明</th></tr></thead>
+        <tbody><tr><td>2026-05</td><td>148,788</td><td>11,089</td><td>7.45%</td><td>口径外月份：仅统计 6 月后发生的退款，退款率被低估</td></tr><tr><td>2026-06</td><td>725,182</td><td>85,505</td><td>11.79%</td><td>口径内退款已基本发生完毕</td></tr><tr><td>2026-07</td><td>142,530</td><td>16,806</td><td>11.79%</td><td>口径内退款已基本发生完毕</td></tr><tr><td>2026-08</td><td>159,887</td><td>12,086</td><td>7.56%</td><td>退款仍在累积，退款率不完整</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    <section class="panel prose-block">
+      
+      <p>把退款「按原始下单月」重新归位后，图景完全变了：6 月订单（618 大促）产生的退款合计 85,505 元，占窗口内全部退款的 68.1%（85,505 / 125,485）；7 月订单 16,806 元（13.4%）；8 月订单 12,086 元（9.6%）。</p><p>按订单口径算退款率，6 月订单 11.79%、7 月订单 11.79%，两者几乎完全相同。这是本次分析最关键的结论：618 大促并没有带来更高的商品或履约风险，它只是把订单量和退款量同时放大，并把退款发生时间推迟到 7 月。</p><p>8 月订单退款率 7.56% 明显更低，但不能据此判断「8 月变好了」——因为 8 月订单的退款还在持续发生，这个数字会继续上升，直到与 11.8% 的稳态收敛。</p><p>经营含义：评估大促成败时，不能用「当月退款率」，否则会把 7 月误判为异常月。应该用「订单合并口径」（按支付月归集退款）来做大促复盘。</p>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>异常与机会</h2>
+        <p>4 个异常信号 + 4 个可操作机会点</p>
+      </div>
+      
+    <section class="panel columns-block">
+      
+      <div class="columns-grid">
+            <div class="column-card">
+              <div class="column-title">⚠️ 异常信号</div>
+              
+    <section class="panel list-block">
+      
+      <ul class="content-list"><li>7 月退款率 27.41% 严重失真：分子是 6 月订单、分母是萎缩的 7 月支付额，属于口径错配而非真实恶化。</li><li>COD 渠道退款率 16.96%，是 JD（8.98%）的 1.9 倍，且 29.4% 的 COD 退款来自「用户拒收」。</li><li>「用户拒收」件单比 1.61（其余原因均为 1.00），说明一次拒收会连带退掉整单商品，单次损失是普通售后的 1.6 倍。</li><li>退款原因分布过于扁平（极差仅 6,881 元），没有主导原因，指向多环节系统性摩擦而非单点事故。</li></ul>
+    </section>
+    
+            </div>
+            
+            <div class="column-card">
+              <div class="column-title">✅ 机会点</div>
+              
+    <section class="panel list-block">
+      
+      <ul class="content-list"><li>COD 降损：把 COD 退款率从 16.96% 压到 JD 的 8.98%，可直接减少约 1.37 万元退款（窗口内）。</li><li>履约改善：「物流时效不满意」+「商品破损」合计 41,618 元（33.2%），属于完全可控的履约环节。</li><li>大促复盘口径改造：改用「按支付月归集退款」，避免每次大促后都被 7 月的高退款率误导。</li><li>商品描述治理：「尺寸/规格不符」19,618 元（15.6%），件单比 1.00，说明是逐件发生的问题，可通过尺码表、实拍图、详情页规格规范化快速挤压。</li></ul>
+    </section>
+    
+            </div>
+            </div>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>行动建议</h2>
+        <p>按「见效速度 × 影响金额」排序</p>
+      </div>
+      
+    <section class="panel list-block">
+      
+      <ol class="content-list"><li>立刻改口径（0 成本，防误判）：大促复盘一律使用「按支付月归集退款」的订单口径退款率。6/7 月订单口径退款率均为 11.79%，据此判断大促没有额外风险；继续用发生月口径会持续误杀 7 月。</li><li>COD 专项（预期减少约 1.3~1.4 万元退款）：在 COD 下单页强化「下单即承诺收货」提示，对高龄/高退货历史地址叠加二次确认或预付小额定金；拒收后限制该地址再次使用 COD。该动作直接命中「用户拒收 × COD」这个 8,602 元的最大单格。</li><li>履约治理（预期影响 4.2 万元）：商品破损与物流时效合计占退款额 33.2%。先做包装升级（易碎品类）和时效承诺校准（详情页标注真实到货时效），这两项都不需要改商品本身。</li><li>商品信息治理（预期影响 2.0 万元）：针对「尺寸/规格不符」补齐尺码表与规格对比图；针对「商品质量问题」建立差评关键词回流机制，把退款原因映射到具体 SKU。</li><li>建议补数：当前只有 3 个省市、且没有商品/SKU 维度。要看真正的归因，需要补上商品维度（品类、SKU、价格带）和更多省份，才能回答「哪些货最容易退」。</li></ol>
+    </section>
+    
+    </section>
+    
+    <section class="panel section-block">
+      <div class="block-head">
+        <h2>附录：口径说明与数据对账</h2>
+        <p>所有结论的可复现依据</p>
+      </div>
+      
+    <section class="panel list-block">
+      
+      <ul class="content-list"><li>时间窗口：2026-06-01 00:00:00 ≤ refund_success_time &lt; 2026-09-01 00:00:00（左闭右开，最近 3 个完整自然月）。数据实际最新支付时间为 2026-09-23，9 月为不完整月份，故未纳入。</li><li>退款口径：dwd_fact_trade_refund_detail_di，refund_status = &#x27;退款成功&#x27;（窗口内该字段去重取值仅此一个，过滤为恒等操作）。</li><li>金额单位：库内 *_amount 字段单位为「分」，全部已 × 0.01 转为「元」。</li><li>支付分母：dwd_fact_trade_order_detail_di.paid_amount，条件 order_pay_time IS NOT NULL 且在窗口内，合计 1,027,599.97 元 / 5,811 单。</li><li>退款率口径：SUM(退款成功金额) / SUM(paid_amount)，分子为「退款发生窗口」、分母为「支付发生窗口」，两窗口错配，故同时提供「按原始下单月归集」的订单口径退款率作为对照。</li><li>渠道维度：取 dwd_fact_trade_pay_detail_di.payment_channel_code，窗口内去重取值 5 个（ALIPAY / COD / JD / UNIONPAY / WECHAT）。</li><li>地域维度：订单表 province_code 关联 dwd_dim_geo_region_df（region_level = 1），样本仅 110000 北京市 / 120000 天津市 / 130000 河北省 三个值。</li><li>订单数去重：689 单为 COUNT(DISTINCT order_id) 结果；分维 refund_orders 直接加总会重复计跨组订单（得 1,002 单），报告中未使用该加总值。</li></ul>
+    </section>
+    
+    <section class="panel table-block">
+      
+      
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>校验项</th><th>独立口径</th><th>报告口径</th><th>结论</th></tr></thead>
+        <tbody><tr><td>A 总量校验</td><td>独立聚合查询 = 125485.1 元</td><td>本报告分维加总 = 125485.16 元</td><td>偏差 0.06 元（0.00005%），来自分组四舍五入，可忽略</td></tr><tr><td>B 明细数校验</td><td>独立查询 = 1083 笔</td><td>分维加总 = 1083 笔</td><td>完全一致</td></tr><tr><td>C 订单数校验</td><td>COUNT(DISTINCT order_id) = 689 单</td><td>分维 refund_orders 加总 = 1,002 单</td><td>分组内去重后加总会重复计跨组订单，已改用去重口径 689 单</td></tr><tr><td>D 金额单位校验</td><td>独立查询原始分 = 2,522,671.42 分（用户拒收）</td><td>乘 0.01 后 = 25226.71 元</td><td>与报告值一致，*0.01 已生效</td></tr><tr><td>E 渠道取值校验</td><td>支付表 payment_channel_code 去重 5 值（ALIPAY/COD/JD/UNIONPAY/WECHAT）</td><td>退款分维渠道取值 [&#x27;ALIPAY&#x27;, &#x27;COD&#x27;, &#x27;JD&#x27;, &#x27;UNIONPAY&#x27;, &#x27;WECHAT&#x27;]</td><td>首次拉数曾出现 HUABEI/JD_PAY，与支付表不符，已按支付表口径重算</td></tr><tr><td>F 退款状态校验</td><td>窗口内 refund_status 去重取值仅&quot;退款成功&quot;</td><td>不筛状态记录数 = 1,083 笔 = 筛选后记录数</td><td>refund_status 过滤在本数据集为恒等过滤，不构成占比变化解释</td></tr></tbody>
+      </table>
+    </div>
+    
+    </section>
+    
+    </section>
+    
+  </main>
+</body>
+</html>

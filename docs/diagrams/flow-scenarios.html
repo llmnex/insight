@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>insight-agent · 场景流程图</title>
+<script src="data.js"></script>
+<style>
+  :root {
+    --bg-0: #F8FAFC; --bg-1: #FFFFFF; --bg-2: #F1F5F9; --bg-3: #E2E8F0;
+    --line: rgba(15, 23, 42, 0.08); --line-strong: rgba(15, 23, 42, 0.20);
+    --text-1: #0F172A; --text-2: #475569; --text-3: #94A3B8; --text-on-accent: #FFFFFF;
+    --accent-cyan: #0891B2; --accent-blue: #2563EB; --accent-purple: #7C3AED;
+    --accent-pink: #DB2777; --accent-green: #16A34A; --accent-yellow: #CA8A04;
+    --accent-orange: #EA580C; --accent-red: #DC2626;
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-0); color: var(--text-1); font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; font-size: 15px; }
+  body { background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px; }
+
+  header { padding: 22px 40px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); position: relative; }
+  header::after { content: ''; position: absolute; left: 40px; right: 40px; bottom: -1px; height: 2px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink), var(--accent-orange), var(--accent-green), var(--accent-purple)); }
+  h1 { font-size: 28px; font-weight: 700; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 16px; color: var(--text-2); margin-top: 6px; }
+  .meta { position: absolute; right: 40px; top: 28px; font-size: 14px; color: var(--text-3); display: flex; gap: 10px; }
+  .meta a { color: var(--accent-cyan); text-decoration: none; padding: 5px 11px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .meta a:hover { background: var(--accent-cyan); color: var(--text-on-accent); }
+
+  main { padding: 24px 40px 60px; max-width: 1900px; margin: 0 auto; }
+
+  /* 场景选择器 */
+  .scene-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .scene-bar-label { font-size: 15px; color: var(--text-2); font-weight: 600; margin-right: 4px; }
+  .scene-btn { padding: 9px 18px; border-radius: 9px; border: 2px solid var(--line-strong); background: var(--bg-1); color: var(--text-2); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .scene-btn:hover { border-color: var(--scene-color, var(--accent-cyan)); color: var(--scene-color, var(--accent-cyan)); }
+  .scene-btn.active { background: var(--scene-color, var(--accent-cyan)); color: var(--text-on-accent); border-color: var(--scene-color, var(--accent-cyan)); box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
+
+  /* 主布局 */
+  .layout { display: grid; grid-template-columns: 1fr 440px; gap: 20px; }
+
+  /* 流程图画布 */
+  .canvas-wrap { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-md); overflow: hidden; }
+  .canvas-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+  .canvas-title { font-size: 17px; font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
+  .canvas-action { padding: 6px 12px; border: 1px solid var(--line-strong); background: var(--bg-1); color: var(--text-2); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+  .canvas-action:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+  .canvas-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text-3); background: rgba(255,255,255,0.9); padding: 4px 12px; border-radius: 12px; pointer-events: none; }
+  .canvas-badge { display: inline-block; padding: 4px 12px; border-radius: 5px; background: var(--accent-cyan); color: #fff; font-size: 13px; font-weight: 700; }
+  .canvas-desc { font-size: 14px; color: var(--text-2); }
+  .canvas-body { padding: 24px; min-height: 600px; position: relative; overflow: hidden; cursor: grab; }
+  .canvas-body svg { width: 100%; height: 600px; user-select: none; }
+
+  /* 节点样式 */
+  .node-rect { fill: var(--bg-1); stroke: var(--node-color, var(--accent-cyan)); stroke-width: 3; transition: all 0.3s; cursor: pointer; }
+  .node-rect.activated { fill: var(--node-color, var(--accent-cyan)); stroke: var(--node-color, var(--accent-cyan)); filter: drop-shadow(0 6px 16px rgba(0,0,0,0.22)); }
+  .node-rect.path { fill: rgba(8, 145, 178, 0.10); stroke: var(--accent-cyan); stroke-width: 3.5; }
+  .node-text { fill: var(--text-1); font-size: 17px; font-weight: 700; pointer-events: none; text-anchor: middle; }
+  .node-text.activated { fill: var(--text-on-accent); }
+  .node-file { fill: var(--text-3); font-size: 13px; font-family: ui-monospace, "Cascadia Code", monospace; pointer-events: none; text-anchor: middle; }
+  .node-file.activated { fill: rgba(255,255,255,0.92); }
+
+  /* 边样式 */
+  .edge-path { fill: none; stroke: var(--bg-3); stroke-width: 3; transition: all 0.3s; }
+  .edge-path.activated { stroke: var(--accent-cyan); stroke-width: 4; filter: drop-shadow(0 0 6px rgba(8, 145, 178, 0.5)); }
+  .edge-label { fill: var(--text-1); font-size: 13px; pointer-events: none; text-anchor: middle; font-weight: 600; }
+  .edge-label.activated { fill: var(--accent-cyan); font-weight: 700; }
+  .edge-label-bg { fill: var(--bg-1); stroke: var(--bg-3); stroke-width: 1; }
+  .edge-label-bg.activated { fill: rgba(8, 145, 178, 0.1); stroke: var(--accent-cyan); }
+
+  /* 节点高亮（被当前步骤点亮） */
+  @keyframes nodeGlow {
+    0%, 100% { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.18)); }
+    50% { filter: drop-shadow(0 4px 18px rgba(8, 145, 178, 0.6)); }
+  }
+  .node-rect.just-activated { animation: nodeGlow 1.4s ease-in-out infinite; }
+
+  /* 步骤控制条 */
+  .step-bar { display: flex; gap: 8px; padding: 14px 22px; background: var(--bg-2); border-top: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+  .step-bar-label { font-size: 14px; color: var(--text-2); font-weight: 600; margin-right: 4px; }
+  .step-pill { padding: 6px 14px; border-radius: 16px; border: 1.5px solid var(--line-strong); background: var(--bg-1); color: var(--text-2); font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .step-pill:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+  .step-pill.done { background: rgba(22, 163, 74, 0.08); border-color: var(--accent-green); color: var(--accent-green); }
+  .step-pill.active { background: var(--accent-cyan); color: #fff; border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.2); }
+  .step-pill.warn { border-color: var(--accent-red); }
+  .step-pill.warn.active { background: var(--accent-red); border-color: var(--accent-red); box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2); }
+
+  /* 右侧：激活文件表格 */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+  .step-detail { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow-md); }
+  .step-detail h3 { font-size: 17px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .step-prompt-box { background: var(--bg-2); border-left: 4px solid var(--accent-cyan); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 15px; margin-bottom: 12px; line-height: 1.6; }
+  .step-prompt-box.warn { border-left-color: var(--accent-red); background: rgba(220, 38, 38, 0.04); }
+  .step-prompt-box .who { font-size: 13px; color: var(--text-3); font-weight: 600; display: block; margin-bottom: 3px; }
+  .step-cap-list { list-style: none; }
+  .step-cap-list li { padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid var(--accent-cyan); margin-bottom: 6px; font-size: 14px; border-radius: 0 5px 5px 0; }
+  .step-cap-list li.warn { border-left-color: var(--accent-red); }
+
+  /* 激活文件表格 */
+  .file-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 0; box-shadow: var(--shadow-md); overflow: hidden; }
+  .file-card-header { padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .file-card-title { font-size: 16px; font-weight: 600; }
+  .file-card-count { font-size: 13px; color: var(--text-3); }
+  .file-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+  .file-table th, .file-table td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+  .file-table th { background: var(--bg-1); color: var(--text-3); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 1; }
+  .file-table td.path { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 13px; }
+  .file-table tr.active td { background: rgba(8, 145, 178, 0.06); }
+  .file-table tr.active td.path { color: var(--text-1); font-weight: 600; }
+  .file-table .mod-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .file-table .status.on { color: var(--accent-green); font-weight: 700; font-size: 16px; }
+  .file-table .status.off { color: var(--text-3); font-size: 16px; }
+
+  .legend { margin-top: 16px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; font-size: 14px; }
+  .legend-title { font-weight: 600; margin-bottom: 8px; color: var(--text-2); }
+  .legend-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+  .legend-dot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+
+  @media (max-width: 1300px) { .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔀 insight-agent · 场景流程图</h1>
+  <div class="subtitle">选场景 → 节点/连线流程图 · 右侧文件激活表格 · 数据与 <a href="interactive-demo.html" style="color:var(--accent-cyan);">interactive-demo.html</a> 共享</div>
+  <div class="meta">
+    <a href="interactive-demo.html">交互演示</a>
+    <a href="flow-flows.html">关联流程图</a>
+    <a href="file-matrix.html">总表</a>
+    <a href="overview.html">序章</a>
+    <a href="../../insight.md">主文档</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- 场景切换 -->
+  <div class="scene-bar" id="sceneBar">
+    <span class="scene-bar-label">场景：</span>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="layout">
+    <!-- 左：流程图 -->
+    <div class="canvas-wrap">
+      <div class="canvas-header">
+        <div class="canvas-title">
+          <span class="canvas-badge" id="canvasBadge">A</span>
+          <span id="canvasTitle">登录 + 建对话 + 上传 Excel</span>
+        </div>
+        <div class="canvas-desc" id="canvasDesc"></div>
+        <button class="canvas-action" id="btnResetZoom" title="重置视图">⟲ 重置视图</button>
+        <button class="canvas-action" id="btnFitZoom" title="适应屏幕">⛶ 适应屏幕</button>
+      </div>
+      <div class="canvas-body">
+        <svg id="graph" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="canvas-hint">🖱️ 滚轮缩放 · 拖拽平移 · 滚轮+Ctrl 重置</div>
+      </div>
+      <div class="step-bar" id="stepBar">
+        <span class="step-bar-label">步骤：</span>
+      </div>
+    </div>
+
+    <!-- 右：详情 + 文件表 -->
+    <div class="right-panel">
+      <div class="step-detail" id="stepDetail">
+        <div style="text-align: center; padding: 30px 20px; color: var(--text-3);">
+          <div style="font-size: 48px; margin-bottom: 8px;">👆</div>
+          <div style="font-size: 16px; font-weight: 600; color: var(--text-2);">选一个步骤</div>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="file-card-title">🗂️ 当前激活文件</span>
+          <span class="file-card-count" id="fileCount">0 / 0</span>
+        </div>
+        <div style="max-height: 480px; overflow-y: auto;">
+          <table class="file-table">
+            <thead>
+              <tr><th>✓</th><th>模块</th><th>路径</th></tr>
+            </thead>
+            <tbody id="fileTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-title">🎨 节点颜色 = 文件模块</div>
+        <div class="legend-grid" id="legendGrid"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// data.js 已将 MODULES/FILES/SCENARIOS/getFileInfo/getModuleColor/getScenario 等挂为全局变量，无需解构
+const _INSIGHT = window.INSIGHT_DATA;  // 仅保留引用避免 IDE 误报
+
+let currentScene = null;
+let currentStepIndex = -1;
+let activeFiles = new Set();
+let activatedNodes = new Set();
+let activatedEdges = new Set();
+let newlyActivatedNodes = new Set();
+
+/* =============== 初始化 =============== */
+function init() {
+  renderSceneBar();
+  renderLegend();
+  renderFileTable();
+  selectScene('A');  // 默认选 A
+
+  // 重置/适应缩放按钮
+  document.getElementById('btnResetZoom').addEventListener('click', () => {
+    const svg = document.getElementById('graph');
+    const layout = layoutGraph(currentScene);
+    svg.setAttribute('viewBox', `${layout.viewBox.x} ${layout.viewBox.y} ${layout.viewBox.w} ${layout.viewBox.h}`);
+    showZoomHint(svg, layout.viewBox.w, layout.viewBox.h);
+  });
+  document.getElementById('btnFitZoom').addEventListener('click', () => {
+    const svg = document.getElementById('graph');
+    const layout = layoutGraph(currentScene);
+    const cw = svg.clientWidth, ch = svg.clientHeight;
+    const scale = Math.min(cw / layout.viewBox.w, ch / layout.viewBox.h) * 0.95;
+    const w = layout.viewBox.w / scale, h = layout.viewBox.h / scale;
+    svg.setAttribute('viewBox', `${-(w - layout.viewBox.w)/2} ${-(h - layout.viewBox.h)/2} ${w} ${h}`);
+    showZoomHint(svg, w, h);
+  });
+}
+
+/* =============== 场景按钮 =============== */
+function renderSceneBar() {
+  const bar = document.getElementById('sceneBar');
+  bar.innerHTML = '<span class="scene-bar-label">场景：</span>' + SCENARIOS.map(s =>
+    `<button class="scene-btn" data-id="${s.id}" style="--scene-color: ${s.color};">${s.id} · ${s.name.replace(/^[A-Z] · /, '').slice(0, 16)}</button>`
+  ).join('');
+  bar.querySelectorAll('.scene-btn').forEach(b => b.addEventListener('click', () => selectScene(b.dataset.id)));
+}
+
+function renderLegend() {
+  const grid = document.getElementById('legendGrid');
+  grid.innerHTML = Object.entries(MODULES).map(([k, m]) =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${m.color};"></span>${m.name}</div>`
+  ).join('');
+}
+
+/* =============== 选中场景 =============== */
+function selectScene(id) {
+  currentScene = getScenario(id);
+  document.querySelectorAll('.scene-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  document.getElementById('canvasBadge').textContent = id;
+  document.getElementById('canvasBadge').style.background = currentScene.color;
+  document.getElementById('canvasTitle').textContent = currentScene.name.replace(/^[A-Z] · /, '');
+  document.getElementById('canvasDesc').textContent = currentScene.desc;
+  renderGraph();
+  renderStepBar();
+  activeFiles = new Set();
+  activatedNodes = new Set();
+  activatedEdges = new Set();
+  renderFileTable();
+  showStepDetail(null);
+}
+
+/* =============== 布局节点（按列分组）=============== */
+// 节点尺寸 + 间距（足够大不挤）
+const NODE_W = 200;
+const NODE_H = 80;
+const COL_GAP = 80;     // 列间距
+const ROW_GAP = 50;     // 行间距
+const MARGIN_X = 60;    // 左右边距
+const MARGIN_Y = 60;    // 上下边距
+
+function layoutGraph(scenario) {
+  const nodes = scenario.nodes;
+  const edges = scenario.edges;
+
+  // BFS 分层（拓扑排序）
+  const layers = {};
+  const visited = new Set();
+  const roots = nodes.filter(n => !edges.some(e => e.to === n.id));
+  roots.forEach(r => { layers[r.id] = 0; visited.add(r.id); });
+  let changed = true, iter = 0;
+  while (changed && iter < 100) {
+    changed = false; iter++;
+    edges.forEach(e => {
+      if (visited.has(e.from) && !visited.has(e.to)) {
+        layers[e.to] = layers[e.from] + 1;
+        visited.add(e.to);
+        changed = true;
+      }
+    });
+  }
+  nodes.forEach(n => { if (!visited.has(n.id)) { layers[n.id] = (Object.values(layers).reduce((a,b)=>Math.max(a,b),-1)) + 1; visited.add(n.id); } });
+
+  // 按层分组
+  const layerGroups = {};
+  nodes.forEach(n => { (layerGroups[layers[n.id]] = layerGroups[layers[n.id]] || []).push(n); });
+  const layerKeys = Object.keys(layerGroups).map(Number).sort((a,b) => a-b);
+
+  // 分配 x,y
+  const positions = {};
+  layerKeys.forEach((lk, li) => {
+    const arr = layerGroups[lk];
+    const colX = MARGIN_X + li * (NODE_W + COL_GAP) + NODE_W / 2;
+    arr.forEach((n, ni) => {
+      positions[n.id] = {
+        x: colX,
+        y: MARGIN_Y + ni * (NODE_H + ROW_GAP) + NODE_H / 2,
+      };
+    });
+  });
+
+  // 计算 viewBox
+  const maxX = Math.max(...Object.values(positions).map(p => p.x)) + NODE_W / 2 + MARGIN_X;
+  const maxY = Math.max(...Object.values(positions).map(p => p.y)) + NODE_H / 2 + MARGIN_Y;
+  // viewBox 高度最小 400，确保单层节点不会挤在顶部
+  const finalH = Math.max(maxY, 400);
+
+  return { positions, viewBox: { x: 0, y: 0, w: maxX, h: finalH } };
+}
+
+/* =============== 绘制流程图 =============== */
+function renderGraph() {
+  const svg = document.getElementById('graph');
+  const layout = layoutGraph(currentScene);
+  const positions = layout.positions;
+  const nodes = currentScene.nodes;
+  const edges = currentScene.edges;
+
+  let svgContent = '';
+
+  // 1) 边
+  edges.forEach(e => {
+    const from = positions[e.from];
+    const to = positions[e.to];
+    if (!from || !to) return;
+    // 从节点边缘出发/到达（而不是中心），避免箭头被矩形挡住
+    const x1 = from.x + NODE_W / 2;
+    const y1 = from.y;
+    const x2 = to.x - NODE_W / 2;
+    const y2 = to.y;
+    const dx = (x2 - x1) * 0.5;
+    const path = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    const edgeKey = `${e.from}->${e.to}`;
+    const isOn = activatedEdges.has(edgeKey);
+    svgContent += `<path class="edge-path ${isOn ? 'activated' : ''}" d="${path}" marker-end="url(#arrow-${isOn ? 'active' : 'normal'})" data-edge="${edgeKey}"/>`;
+    if (e.label) {
+      const lx = (x1 + x2) / 2;
+      const ly = (y1 + y2) / 2 - 8;
+      svgContent += `<rect class="edge-label-bg ${isOn ? 'activated' : ''}" x="${lx - e.label.length * 6}" y="${ly - 14}" width="${e.label.length * 12}" height="20" rx="4"/>`;
+      svgContent += `<text class="edge-label ${isOn ? 'activated' : ''}" x="${lx}" y="${ly}">${e.label}</text>`;
+    }
+  });
+
+  // 箭头定义
+  const arrowDef = `<defs>
+    <marker id="arrow-normal" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,7 L9,3.5 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrow-active" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,7 L9,3.5 z" fill="#0891B2"/>
+    </marker>
+  </defs>`;
+
+  // 2) 节点
+  nodes.forEach(n => {
+    const p = positions[n.id];
+    if (!p) return;
+    const modColor = getModuleColor(n.module);
+    const isActive = activatedNodes.has(n.id);
+    const rectClass = isActive ? 'activated' : '';
+    const textClass = isActive ? 'activated' : '';
+    const flashClass = newlyActivatedNodes.has(n.id) ? 'just-activated' : '';
+    // 截断过长 label（最多 14 字符）
+    const label = n.label.length > 14 ? n.label.slice(0, 13) + '…' : n.label;
+    const file = n.file.length > 24 ? n.file.slice(0, 23) + '…' : n.file;
+    svgContent += `
+      <g class="node-group" data-node="${n.id}">
+        <rect class="node-rect ${rectClass} ${flashClass}"
+              x="${p.x - NODE_W/2}" y="${p.y - NODE_H/2}" width="${NODE_W}" height="${NODE_H}"
+              style="--node-color: ${modColor};" rx="12"/>
+        <text class="node-text ${textClass}" x="${p.x}" y="${p.y - 12}">${label}</text>
+        <text class="node-file ${textClass}" x="${p.x}" y="${p.y + 14}">${file}</text>
+      </g>
+    `;
+  });
+
+  svg.innerHTML = arrowDef + svgContent;
+
+  // 设置 viewBox（自适应）
+  svg.setAttribute('viewBox', `${layout.viewBox.x} ${layout.viewBox.y} ${layout.viewBox.w} ${layout.viewBox.h}`);
+  svg.removeAttribute('preserveAspectRatio');  // 让用户可拖动时不强制居中
+
+  // 初始化 pan/zoom
+  initPanZoom(svg);
+}
+
+/* =============== Pan & Zoom（滚轮缩放 + 拖拽平移）=============== */
+const panZoom = { isPanning: false, startX: 0, startY: 0, vbX: 0, vbY: 0, vbW: 0, vbH: 0 };
+
+function initPanZoom(svg) {
+  // 移除旧监听
+  if (svg._panZoomInited) return;
+  svg._panZoomInited = true;
+
+  // 滚轮缩放
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const vb = svg.viewBox.baseVal;
+    const scale = e.deltaY > 0 ? 1.15 : 0.87;
+    // 以鼠标位置为中心缩放
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const newW = vb.width * scale;
+    const newH = vb.height * scale;
+    const newX = cursor.x - (cursor.x - vb.x) * scale;
+    const newY = cursor.y - (cursor.y - vb.y) * scale;
+    svg.setAttribute('viewBox', `${newX} ${newY} ${newW} ${newH}`);
+    showZoomHint(svg, newW, newH);
+  }, { passive: false });
+
+  // 拖拽平移
+  svg.addEventListener('mousedown', (e) => {
+    panZoom.isPanning = true;
+    const vb = svg.viewBox.baseVal;
+    panZoom.startX = e.clientX;
+    panZoom.startY = e.clientY;
+    panZoom.vbX = vb.x; panZoom.vbY = vb.y;
+    panZoom.vbW = vb.width; panZoom.vbH = vb.height;
+    svg.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!panZoom.isPanning) return;
+    const dx = (e.clientX - panZoom.startX) * (panZoom.vbW / svg.clientWidth);
+    const dy = (e.clientY - panZoom.startY) * (panZoom.vbH / svg.clientHeight);
+    svg.setAttribute('viewBox', `${panZoom.vbX - dx} ${panZoom.vbY - dy} ${panZoom.vbW} ${panZoom.vbH}`);
+  });
+  window.addEventListener('mouseup', () => {
+    if (panZoom.isPanning) {
+      panZoom.isPanning = false;
+      svg.style.cursor = 'grab';
+    }
+  });
+}
+
+function showZoomHint(svg, w, h) {
+  let hint = document.getElementById('zoomHint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'zoomHint';
+    hint.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(15,23,42,0.85);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;pointer-events:none;z-index:10;';
+    svg.parentElement.style.position = 'relative';
+    svg.parentElement.appendChild(hint);
+  }
+  hint.textContent = `${Math.round(w)} × ${Math.round(h)}`;
+  hint.style.opacity = '1';
+  clearTimeout(hint._t);
+  hint._t = setTimeout(() => hint.style.opacity = '0.3', 800);
+}
+
+/* =============== 步骤切换 =============== */
+function renderStepBar() {
+  const bar = document.getElementById('stepBar');
+  bar.innerHTML = '<span class="step-bar-label">步骤：</span>' + currentScene.steps.map((s, i) =>
+    `<button class="step-pill ${s.warn ? 'warn' : ''}" data-i="${i}">Step ${i+1} · ${s.t}${s.warn ? ' ⚠️' : ''}</button>`
+  ).join('');
+  bar.querySelectorAll('.step-pill').forEach(b => b.addEventListener('click', () => goToStep(parseInt(b.dataset.i))));
+}
+
+function goToStep(i) {
+  if (i < 0 || i >= currentScene.steps.length) return;
+  currentStepIndex = i;
+  const step = currentScene.steps[i];
+
+  // 计算新激活的文件
+  const newActiveFiles = new Set(activeFiles);
+  step.files.forEach(f => newActiveFiles.add(f));
+  activeFiles = newActiveFiles;
+
+  // 计算新激活的节点（找到涉及这些文件的节点）
+  const newNodes = new Set(activatedNodes);
+  const newEdges = new Set(activatedEdges);
+  const justNodes = new Set();
+  currentScene.nodes.forEach(n => {
+    if (newActiveFiles.has(n.file) && !activatedNodes.has(n.id)) {
+      newNodes.add(n.id);
+      justNodes.add(n.id);
+    }
+  });
+  // 边：只要 from/to 都在 newNodes 里就亮
+  currentScene.edges.forEach(e => {
+    if (newNodes.has(e.from) && newNodes.has(e.to)) newEdges.add(`${e.from}->${e.to}`);
+  });
+  newlyActivatedNodes = justNodes;
+  activatedNodes = newNodes;
+  activatedEdges = newEdges;
+
+  renderGraph();
+  setTimeout(() => { newlyActivatedNodes = new Set(); renderGraph(); }, 1500);
+
+  // 更新步骤条
+  document.querySelectorAll('.step-pill').forEach((b, idx) => {
+    b.classList.remove('active', 'done');
+    if (idx < i) b.classList.add('done');
+    else if (idx === i) b.classList.add('active');
+  });
+
+  updateFileTable();
+  showStepDetail(step);
+}
+
+function showStepDetail(step) {
+  const el = document.getElementById('stepDetail');
+  if (!step) {
+    el.innerHTML = `<div style="text-align: center; padding: 30px 20px; color: var(--text-3);">
+      <div style="font-size: 48px; margin-bottom: 8px;">👆</div>
+      <div style="font-size: 16px; font-weight: 600; color: var(--text-2);">选一个步骤</div>
+      <div style="font-size: 13px; margin-top: 6px;">点底部步骤按钮，节点会逐个点亮</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `
+    <h3>${step.warn ? '⚠️' : '🔧'} Step ${currentStepIndex + 1} · ${step.t}</h3>
+    <div class="step-prompt-box ${step.warn ? 'warn' : ''}">
+      <span class="who">${step.who}</span>
+      ${step.prompt}
+      ${step.warnText ? `<div style="margin-top: 6px; font-size: 13px; color: var(--accent-red); font-weight: 600;">${step.warnText}</div>` : ''}
+    </div>
+    <div style="font-size: 14px; font-weight: 600; color: var(--text-2); margin-bottom: 8px;">系统做了什么（${step.caps.length} 步）</div>
+    <ul class="step-cap-list">
+      ${step.caps.map(c => `<li class="${step.warn ? 'warn' : ''}">${c}</li>`).join('')}
+    </ul>
+    <div style="font-size: 14px; font-weight: 600; color: var(--text-2); margin: 14px 0 8px;">📍 本步点亮节点（${step.highlightNodes ? step.highlightNodes.length : 0} 个）</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+      ${(step.highlightNodes || []).map(nid => {
+        const node = currentScene.nodes.find(n => n.id === nid);
+        if (!node) return '';
+        return `<span style="padding: 4px 10px; background: ${getModuleColor(node.module)}; color: #fff; border-radius: 5px; font-size: 13px; font-weight: 600;">${node.label}</span>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* =============== 激活文件表格 =============== */
+function renderFileTable() {
+  const tbody = document.getElementById('fileTableBody');
+  tbody.innerHTML = FILES.map(f => {
+    const info = getFileInfo(f.path);
+    const modColor = getModuleColor(info.module);
+    return `<tr data-path="${f.path}">
+      <td class="status"><span class="off">○</span></td>
+      <td><span class="mod-dot" style="background:${modColor};"></span> ${getModuleName(info.module)}</td>
+      <td class="path">${f.path}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateFileTable() {
+  document.querySelectorAll('#fileTableBody tr').forEach(tr => {
+    const path = tr.dataset.path;
+    const statusCell = tr.querySelector('.status');
+    if (activeFiles.has(path)) {
+      tr.classList.add('active');
+      statusCell.innerHTML = '<span class="on">✓</span>';
+    } else {
+      tr.classList.remove('active');
+      statusCell.innerHTML = '<span class="off">○</span>';
+    }
+  });
+  document.getElementById('fileCount').textContent = `${activeFiles.size} / ${FILES.length}`;
+}
+
+init();
+</script>
+
+</body>
+</html>
